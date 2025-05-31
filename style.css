@@ -1,0 +1,539 @@
+
+/* تنسيقات أساسية */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    direction: rtl;
+    text-align: right;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* إصلاح مشاكل النصوص */
+* {
+    box-sizing: border-box;
+    word-break: break-word;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+
+.navbar-text {
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/* تأثيرات بطاقات الخدمات */
+.service-card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.service-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* تنسيق صفحة تسجيل الدخول */
+.login-container {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.login-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
+    max-width: 400px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.login-header {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+
+.login-body {
+    padding: 2rem;
+}
+
+.form-control {
+    border-radius: 25px;
+    border: 2px solid #e9ecef;
+    padding: 12px 20px;
+    transition: border-color 0.3s;
+    font-size: 14px;
+    width: 100%;
+}
+
+.form-control:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+}
+
+.btn-primary {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    border: none;
+    border-radius: 25px;
+    padding: 12px 30px;
+    font-weight: bold;
+    transition: transform 0.2s;
+    width: 100%;
+    font-size: 16px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(45deg, #5a6fd8, #6a4190);
+}
+
+/* تنسيق عناصر القائمة النشطة */
+.list-group-item.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.list-group-item {
+    padding: 0.75rem 1rem;
+    font-size: 14px;
+    border: 1px solid rgba(0,0,0,.125);
+}
+
+/* تنسيق الإشعارات */
+.alert {
+    border-radius: 10px;
+    border: none;
+    margin-bottom: 1rem;
+    font-size: 14px;
+}
+
+/* تنسيق الجداول */
+.table {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    font-size: 14px;
+    width: 100%;
+    margin-bottom: 1rem;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: bold;
+    padding: 12px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.table tbody td {
+    padding: 10px 8px;
+    vertical-align: middle;
+    font-size: 13px;
+    word-break: break-word;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* تنسيق الأزرار */
+.btn {
+    border-radius: 25px;
+    padding: 8px 16px;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-size: 13px;
+    margin: 2px;
+    white-space: nowrap;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+.btn-group .btn {
+    margin: 0;
+    border-radius: 0;
+}
+
+.btn-group .btn:first-child {
+    border-radius: 25px 0 0 25px;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 25px 25px 0;
+}
+
+/* تنسيق البطاقات */
+.card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+    margin-bottom: 1rem;
+}
+
+.card:hover {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    border-radius: 15px 15px 0 0 !important;
+    border-bottom: none;
+    font-weight: bold;
+    padding: 1rem;
+    font-size: 16px;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+/* تنسيق الحقول */
+.input-group {
+    margin-bottom: 1rem;
+}
+
+.input-group-text {
+    background-color: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-left: none;
+    border-radius: 0 25px 25px 0;
+    font-size: 14px;
+}
+
+/* تنسيق النماذج */
+.modal-content {
+    border-radius: 15px;
+    border: none;
+}
+
+.modal-header {
+    border-radius: 15px 15px 0 0;
+    border-bottom: 1px solid #e9ecef;
+    padding: 1rem;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    border-top: 1px solid #e9ecef;
+    padding: 1rem;
+}
+
+.form-label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    font-size: 14px;
+}
+
+/* تنسيق responsive للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 10px;
+    }
+    
+    .login-card {
+        margin: 10px;
+    }
+    
+    .service-card {
+        margin-bottom: 1rem;
+        min-height: 120px;
+    }
+    
+    .navbar-brand {
+        font-size: 1rem;
+    }
+    
+    .navbar-text {
+        font-size: 0.8rem;
+        display: block;
+        margin: 2px 0;
+    }
+    
+    .card-header h5, .card-header h4 {
+        font-size: 1.1rem;
+    }
+    
+    .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin: 1px;
+    }
+    
+    .btn-sm {
+        padding: 3px 8px;
+        font-size: 11px;
+    }
+    
+    .table {
+        font-size: 12px;
+    }
+    
+    .table thead th {
+        padding: 8px 4px;
+        font-size: 11px;
+    }
+    
+    .table tbody td {
+        padding: 6px 4px;
+        font-size: 11px;
+    }
+    
+    .modal-dialog {
+        margin: 10px;
+        max-width: calc(100% - 20px);
+    }
+    
+    .row {
+        margin: 0;
+    }
+    
+    .col-md-3, .col-md-9 {
+        padding: 5px;
+    }
+}
+
+@media (max-width: 576px) {
+    .container-fluid {
+        padding: 5px;
+    }
+    
+    .navbar {
+        padding: 0.5rem;
+    }
+    
+    .navbar-brand {
+        font-size: 0.9rem;
+    }
+    
+    .navbar-text {
+        font-size: 0.7rem;
+    }
+    
+    .card-header {
+        padding: 0.75rem;
+        font-size: 14px;
+    }
+    
+    .card-body {
+        padding: 0.75rem;
+    }
+    
+    .btn-group {
+        flex-wrap: wrap;
+    }
+    
+    .btn-group .btn {
+        border-radius: 20px;
+        margin: 2px;
+    }
+    
+    .table-responsive {
+        font-size: 11px;
+    }
+    
+    .modal-body {
+        padding: 1rem;
+    }
+    
+    .form-control {
+        font-size: 13px;
+        padding: 10px 15px;
+    }
+    
+    .alert {
+        font-size: 12px;
+        padding: 0.5rem;
+    }
+}
+
+/* تأثيرات إضافية */
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* تنسيق الإحصائيات */
+.stats-card {
+    background: linear-gradient(45deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: transform 0.2s;
+    min-height: 120px;
+}
+
+.stats-card:hover {
+    transform: scale(1.05);
+}
+
+/* تنسيق الرصيد */
+.balance-display {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #28a745;
+}
+
+/* تنسيق الأيقونات */
+.fa, .fas, .far {
+    margin-left: 8px;
+}
+
+/* تحسين النصوص الطويلة */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* تنسيق خاص للأزرار في الجداول */
+.btn-group-vertical .btn {
+    border-radius: 25px;
+    margin: 2px 0;
+}
+
+/* تحسين تدرج الألوان */
+.bg-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3) !important;
+}
+
+.bg-danger {
+    background: linear-gradient(45deg, #dc3545, #a71e2a) !important;
+}
+
+.bg-success {
+    background: linear-gradient(45deg, #28a745, #1e7e34) !important;
+}
+
+.bg-warning {
+    background: linear-gradient(45deg, #ffc107, #d39e00) !important;
+}
+
+.bg-info {
+    background: linear-gradient(45deg, #17a2b8, #117a8b) !important;
+}
+
+/* تحسين الحدود */
+.border-0 {
+    border: none !important;
+}
+
+/* تحسين المسافات */
+.p-2 {
+    padding: 0.5rem !important;
+}
+
+.m-2 {
+    margin: 0.5rem !important;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem !important;
+}
+
+.mt-2 {
+    margin-top: 0.5rem !important;
+}
+
+/* تحسين النصوص */
+.text-center {
+    text-align: center !important;
+}
+
+.text-right {
+    text-align: right !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+/* تحسين العرض */
+.w-100 {
+    width: 100% !important;
+}
+
+.h-100 {
+    height: 100% !important;
+}
+
+/* تحسين الانتقالات */
+.transition-all {
+    transition: all 0.3s ease;
+}
+
+/* إخفاء عناصر في الشاشات الصغيرة */
+@media (max-width: 768px) {
+    .d-md-none {
+        display: none !important;
+    }
+    
+    .d-md-block {
+        display: block !important;
+    }
+}
+
+/* تحسين أداء الموقع */
+* {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+    max-width: 100%;
+    height: auto;
+}
+
+/* تحسين التمرير */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
