@@ -4019,12 +4019,51 @@ def after_request(response):
 
     return response
 
+def start_telegram_bot():
+    """تشغيل بوت التليجرام في thread منفصل"""
+    try:
+        import subprocess
+        import sys
+        
+        print("🤖 بدء تشغيل بوت التليجرام...")
+        
+        # تشغيل البوت في عملية منفصلة
+        process = subprocess.Popen(
+            [sys.executable, 'telegram_bot.py'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        
+        print(f"✅ تم تشغيل بوت التليجرام (PID: {process.pid})")
+        return process
+        
+    except Exception as e:
+        print(f"❌ خطأ في تشغيل بوت التليجرام: {e}")
+        return None
+
 if __name__ == '__main__':
     init_db()
     load_telegram_users()
 
-    print("🚀 بدء تشغيل خادم Flask...")
+    print("🚀 بدء تشغيل النظام...")
     print(f"📱 مستخدمو التليجرام المسجلون: {len(telegram_users)}")
 
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    # تشغيل بوت التليجرام أولاً
+    bot_process = start_telegram_bot()
+    
+    # انتظار قصير للتأكد من بدء البوت
+    time.sleep(2)
+    
+    print("🌐 بدء تشغيل خادم Flask...")
+    
+    try:
+        port = int(os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
+    except KeyboardInterrupt:
+        print("🛑 إيقاف النظام...")
+        if bot_process:
+            try:
+                bot_process.terminate()
+                print("✅ تم إيقاف بوت التليجرام")
+            except:
+                pass
