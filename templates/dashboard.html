@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}لوحة التحكم - {{ session.user_name }}{% endblock %}
+
+{% block content %}
+<!-- شريط علوي -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">
+            <i class="fas fa-building"></i> مؤسسة نور التجارية
+        </a>
+        <div class="navbar-nav ms-auto">
+            <span class="navbar-text me-3">
+                <i class="fas fa-user"></i> {{ session.user_name }}
+            </span>
+            <span class="navbar-text me-3">
+                <i class="fas fa-wallet"></i> الرصيد: <strong>{{ session.user_balance }} ل.س</strong>
+            </span>
+            <a class="nav-link" href="{{ url_for('logout') }}">
+                <i class="fas fa-sign-out-alt"></i> خروج
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="row mt-3">
+    <!-- القائمة الجانبية -->
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5><i class="fas fa-list"></i> القائمة الرئيسية</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action active" onclick="showSection('mainServices')">
+                    <i class="fas fa-home"></i> الصفحة الرئيسية
+                </a>
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action" onclick="showSection('notifications')">
+                    <i class="fas fa-bell"></i> الإشعارات
+                    <span id="notificationBadge" class="badge bg-danger ms-2" style="display: none;">0</span>
+                </a>
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action" onclick="showSection('transactions')">
+                    <i class="fas fa-history"></i> سجل العمليات
+                </a>
+                <a href="javascript:void(0)" class="list-group-item list-group-item-action" onclick="showChangePasswordModal()">
+                    <i class="fas fa-key"></i> تغيير كلمة المرور
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="col-md-9">
+        <!-- إعلان -->
+        <div class="alert alert-info alert-dismissible fade show" role="alert" id="announcementAlert">
+            <i class="fas fa-bullhorn"></i>
+            <strong>إعلان:</strong> <span id="announcementText">مرحباً بكم في نظام تسديد فواتير مؤسسة نور التجارية</span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- خيارات التسديد الرئيسية -->
+        <div id="mainServices">
+            <h4><i class="fas fa-credit-card"></i> خدمات التسديد المتاحة</h4>
+
+
+
+            <!-- تم إخفاء قسم الاستعلام عن الزبائن -->
+
+            <!-- خدمة التسديد -->
+            <div id="availableCompanies">
+                <div class="text-center">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5><i class="fas fa-credit-card"></i> طلب تسديد جديد</h5>
+                            <p>إضافة بيانات جديدة للتسديد</p>
+                            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#serviceRequestModal">
+                                <i class="fas fa-plus"></i> إضافة طلب تسديد
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- زر إعادة تحميل البيانات -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="alert alert-info" style="display: none;" id="connectionAlert">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span><i class="fas fa-wifi"></i> مشكلة في الاتصال بالخادم</span>
+                            <button class="btn btn-sm btn-outline-primary" onclick="reloadBasicData()">
+                                <i class="fas fa-sync"></i> إعادة المحاولة
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- إحصائيات سريعة -->
+            <div class="row mt-4 mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <i class="fas fa-clock fa-2x mb-2"></i>
+                            <h6>طلبات معلقة</h6>
+                            <h4 id="pendingRequests">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <i class="fas fa-check-circle fa-2x mb-2"></i>
+                            <h6>عمليات مكتملة</h6>
+                            <h4 id="completedTransactions">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body text-center">
+                            <i class="fas fa-times-circle fa-2x mb-2"></i>
+                            <h6>طلبات مرفوضة</h6>
+                            <h4 id="rejectedRequests">0</h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <i class="fas fa-money-bill fa-2x mb-2"></i>
+                            <h6>إجمالي اليوم</h6>
+                            <h4 id="todayTotal">0</h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- تم إزالة نافذة الاستعلام -->
+
+            <!-- نموذج طلب الخدمة -->
+            <div class="modal fade" id="serviceRequestModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="serviceModalTitle">طلب تسديد</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="serviceRequestForm">
+                                <input type="hidden" id="serviceCategoryId">
+                                <input type="hidden" id="serviceCompanyId">
+                                <input type="hidden" id="serviceType">
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">رقم الهاتف <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">
+                                                    <i class="fas fa-phone"></i>
+                                                </span>
+                                                <input type="text" class="form-control" id="servicePhoneNumber" 
+                                                       placeholder="011xxxxxxx أو 09xxxxxxxx" required maxlength="10">
+                                                <button class="btn btn-outline-secondary" type="button" 
+                                                        onclick="searchExistingCustomer()">
+                                                    <i class="fas fa-search"></i> بحث
+                                                </button>
+                                            </div>
+                                            <small class="text-muted">أدخل رقم الهاتف مع رمز المحافظة أو رقم الجوال</small>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">اسم المشترك <span class="text-danger">*</span></label>
+                                            <input type="text" class="form-control" id="serviceCustomerName" 
+                                                   placeholder="أدخل اسم المشترك" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">الشركة <span class="text-danger">*</span></label>
+                                            <select class="form-control" id="serviceCompanySelect" required onchange="updateServiceDetails()">
+                                                <option value="">اختر الشركة</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">رقم الجوال</label>
+                                            <input type="text" class="form-control" id="serviceMobileNumber" 
+                                                   placeholder="09xxxxxxxx">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3" id="serviceAmountSection">
+                                            <label class="form-label">المبلغ <span class="text-danger">*</span></label>
+                                            <div class="input-group">
+                                                <input type="number" class="form-control" id="serviceAmount" 
+                                                       step="0.01" min="1" placeholder="0.00" required>
+                                                <span class="input-group-text">ل.س</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6" id="serviceSpeedSection" style="display: none;">
+                                        <div class="mb-3">
+                                            <label class="form-label">السرعة</label>
+                                            <select class="form-control" id="serviceSpeed">
+                                                <option value="">اختر السرعة</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- عرض تفاصيل التكلفة -->
+                                <div class="row" id="costBreakdown" style="display: none;">
+                                    <div class="col-12">
+                                        <div class="alert alert-info">
+                                            <h6>تفاصيل التكلفة:</h6>
+                                            <div id="costDetails"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">ملاحظات</label>
+                                    <textarea class="form-control" id="serviceNotes" rows="3" 
+                                              placeholder="أي ملاحظات إضافية..."></textarea>
+                                </div>
+
+                                <!-- تأكيد الرصيد -->
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-wallet"></i> 
+                                    رصيدك الحالي: <strong>{{ session.user_balance }} ل.س</strong>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                            <button type="button" class="btn btn-primary" onclick="submitServiceRequest()">
+                                <i class="fas fa-paper-plane"></i> إرسال الطلب
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- الأقسام المختلفة (مخفية افتراضياً) -->
+        <div id="notifications" style="display: none;">
+            <h4><i class="fas fa-bell"></i> الإشعارات</h4>
+            <div id="notificationsContainer">
+                <div class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="transactions" style="display: none;">
+            <h4><i class="fas fa-history"></i> سجل العمليات</h4>
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <input type="text" class="form-control" id="transactionSearch" 
+                                   placeholder="البحث برقم الهاتف أو اسم الزبون..." 
+                                   onkeyup="searchTransactions()">
+                        </div>
+                        <div class="col-md-4">
+                            <select class="form-control" id="transactionStatus" onchange="searchTransactions()">
+                                <option value="">جميع الحالات</option>
+                                <option value="pending">معلق</option>
+                                <option value="approved">مقبول</option>
+                                <option value="rejected">مرفوض</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-primary w-100" onclick="loadUserTransactions()">
+                                <i class="fas fa-refresh"></i> تحديث
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>رقم الهاتف</th>
+                                    <th>اسم الزبون</th>
+                                    <th>الشركة</th>
+                                    <th>الفئة</th>
+                                    <th>المبلغ</th>
+                                    <th>الحالة</th>
+                                    <th>التاريخ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="userTransactionsTableBody">
+                                <tr>
+                                    <td colspan="7" class="text-center">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <div id="changePassword" style="display: none;">
+            <h4><i class="fas fa-key"></i> تغيير كلمة المرور</h4>
+            <div class="card">
+                <div class="card-body">
+                    <form>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">تغيير كلمة المرور</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة تفاصيل المعاملة -->
+<div class="modal fade" id="transactionDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-receipt me-2"></i>تفاصيل المعاملة
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="transactionDetailsBody">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">جاري التحميل...</span>
+                    </div>
+                    <div class="mt-2">جاري تحميل التفاصيل...</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal لتغيير كلمة المرور -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="changePasswordModalLabel">تغيير كلمة المرور</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm">
+                    <div class="mb-3">
+                        <label for="currentPassword" class="form-label">كلمة المرور الحالية</label>
+                        <input type="password" class="form-control" id="currentPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">كلمة المرور الجديدة</label>
+                        <input type="password" class="form-control" id="newPassword" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="confirmNewPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
+                        <input type="password" class="form-control" id="confirmNewPassword" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="submitPasswordChange()">تغيير كلمة المرور</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showChangePasswordModal() {
+        $('#changePasswordModal').modal('show');
+    }
+
+    function submitPasswordChange() {
+        // هنا يمكنك إضافة كود للتحقق من كلمة المرور وإرسالها إلى الخادم
+        // بعد ذلك، يمكنك إظهار رسالة نجاح أو خطأ وإغلاق النافذة
+        console.log('تم تغيير كلمة المرور بنجاح!');
+        $('#changePasswordModal').modal('hide');
+    }
+</script>
+{% endblock %}

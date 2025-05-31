@@ -1,0 +1,2929 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة الإدارة - مؤسسة نور التجارية</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .admin-section {
+            display: none;
+        }
+
+        .admin-section.active {
+            display: block;
+        }
+
+        .table-hover tbody tr:hover {
+            background-color: rgba(0,123,255,0.1);
+        }
+
+        .btn-group-sm .btn {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .card-stats {
+            transition: transform 0.2s;
+        }
+
+        .card-stats:hover {
+            transform: translateY(-2px);
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+        }
+
+        .error-message {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .action-buttons {
+            position: sticky;
+            top: 0;
+            background: white;
+            z-index: 100;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .user-name-clickable {
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .user-name-clickable:hover {
+            color: #0056b3 !important;
+            text-shadow: 0 0 2px rgba(0, 86, 179, 0.3);
+            transform: translateX(2px);
+        }
+
+        .user-name-clickable:active {
+            transform: translateX(1px) scale(0.98);
+            color: #003d82 !important;
+        }
+
+        .user-name-clickable::before {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(to right, #007bff, #0056b3);
+            transition: width 0.3s ease;
+        }
+
+        .user-name-clickable:hover::before {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <!-- شريط علوي للإدارة -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-cog"></i> لوحة الإدارة - مؤسسة نور التجارية
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="navbar-text me-3">
+                    <i class="fas fa-user-shield"></i> {{ session.user_name }}
+                </span>
+                <a class="nav-link" href="{{ url_for('logout') }}">
+                    <i class="fas fa-sign-out-alt"></i> خروج
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- قائمة إدارية جانبية -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header bg-danger text-white">
+                        <h5><i class="fas fa-tools"></i> إدارة النظام</h5>
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="#" class="list-group-item list-group-item-action active" onclick="showAdminSection('adminMain', this)">
+                            <i class="fas fa-chart-bar"></i> الإحصائيات
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('settings', this)">
+                            <i class="fas fa-cog"></i> الإعدادات
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('users', this)">
+                            <i class="fas fa-users"></i> المستخدمين
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('companies', this)">
+                            <i class="fas fa-building"></i> شركات التسديد
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('customers', this)">
+                            <i class="fas fa-address-book"></i> الزبائن
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('inquiryRequests', this)">
+                            <i class="fas fa-credit-card"></i> طلبات التسديد
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- المحتوى الإداري -->
+            <div class="col-md-9">
+                <!-- الإحصائيات -->
+                <div id="adminMain" class="admin-section active">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4><i class="fas fa-chart-bar"></i> إحصائيات النظام</h4>
+                        <button class="btn btn-primary btn-sm" onclick="refreshStats()">
+                            <i class="fas fa-sync"></i> تحديث
+                        </button>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-primary text-white card-stats">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-users fa-2x mb-2"></i>
+                                    <h5>المستخدمين</h5>
+                                    <h3 id="adminUsersCount">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-success text-white card-stats">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                    <h5>العمليات الناجحة</h5>
+                                    <h3 id="adminSuccessful">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-warning text-white card-stats">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-2x mb-2"></i>
+                                    <h5>بانتظار الموافقة</h5>
+                                    <h3 id="adminPending">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 mb-3">
+                            <div class="card bg-danger text-white card-stats">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-times-circle fa-2x mb-2"></i>
+                                    <h5>العمليات المرفوضة</h5>
+                                    <h3 id="adminRejected">0</h3>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الإعدادات -->
+                <div id="settings" class="admin-section">
+                    <h4><i class="fas fa-cog"></i> الإعدادات</h4>
+
+                    <!-- إعدادات الموقع -->
+                    <div class="card mb-3">
+                        <div class="card-header bg-secondary text-white">
+                            <h5><i class="fas fa-cogs"></i> إعدادات الموقع</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="siteSettingsForm">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">اسم الموقع</label>
+                                            <input type="text" class="form-control" id="siteName" value="مؤسسة نور التجارية">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label">حالة الموقع</label>
+                                            <select class="form-control" id="maintenanceMode">
+                                                <option value="false">يعمل بشكل طبيعي</option>
+                                                <option value="true">تحت الصيانة</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">نص الإعلان</label>
+                                    <textarea class="form-control" id="announcement" rows="3">مرحباً بكم في نظام تسديد فواتير مؤسسة نور التجارية</textarea>
+                                </div>
+                                <div class="mb-3" id="maintenanceReasonSection" style="display: none;">
+                                    <label class="form-label">سبب الصيانة</label>
+                                    <textarea class="form-control" id="maintenanceReason" rows="2" placeholder="سبب إيقاف الموقع مؤقتاً..."></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-primary me-2" onclick="saveSiteSettings()">
+                                        <i class="fas fa-save"></i> حفظ الإعدادات
+                                    </button>
+                                    <button type="button" class="btn btn-success me-2" onclick="createBackup()">
+                                        <i class="fas fa-download"></i> إنشاء نسخة احتياطية
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- النسخ الاحتياطية -->
+                    <div class="card">
+                        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-archive"></i> النسخ الاحتياطية</h5>
+                            <button type="button" class="btn btn-light btn-sm" onclick="showUploadBackupModal()">
+                                <i class="fas fa-upload"></i> رفع نسخة احتياطية
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>اسم الملف</th>
+                                            <th>الحجم</th>
+                                            <th>تاريخ الإنشاء</th>
+                                            <th>المنشئ</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="backupsTableBody">
+                                        <tr>
+                                            <td colspan="5" class="text-center">جاري التحميل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم المستخدمين -->
+                <div id="users" class="admin-section">
+                    <div class="action-buttons">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-users"></i> إدارة المستخدمين</h4>
+                            <button class="btn btn-success" onclick="showAddUserModal()">
+                                <i class="fas fa-plus"></i> إضافة مستخدم جديد
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive table-container">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>الاسم</th>
+                                            <th>رقم الجوال</th>
+                                            <th>الرصيد</th>
+                                            <th>النوع</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="usersTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">جاري التحميل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الشركات -->
+                <div id="companies" class="admin-section">
+                    <div class="action-buttons">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-building"></i> شركات التسديد</h4>
+                            <div>
+                                <button class="btn btn-success me-2" onclick="showAddCompanyModal()">
+                                    <i class="fas fa-plus"></i> إضافة شركة جديدة
+                                </button>
+                                <button class="btn btn-info" onclick="showCategoriesModal()">
+                                    <i class="fas fa-tags"></i> إدارة الفئات
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive table-container">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>الشركة</th>
+                                            <th>الفئة</th>
+                                            <th>القسم الفرعي</th>
+                                            <th>العمولة</th>
+                                            <th>الحالة</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="companiesTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">جاري التحميل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم الزبائن -->
+                <div id="customers" class="admin-section">
+                    <div class="action-buttons">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-address-book"></i> الزبائن</h4>
+                            <button class="btn btn-success" onclick="showAddCustomerModal()">
+                                <i class="fas fa-plus"></i> إضافة زبون جديد
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive table-container">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>رقم الهاتف</th>
+                                            <th>الاسم</th>
+                                            <th>الجوال</th>
+                                            <th>الشركة</th>
+                                            <th>ملاحظات</th>
+                                            <th>الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="customersTableBody">
+                                        <tr>
+                                            <td colspan="6" class="text-center">جاري التحميل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم طلبات التسديد -->
+                <div id="inquiryRequests" class="admin-section">
+                    <div class="action-buttons">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-credit-card"></i> طلبات التسديد</h4>
+                            <button class="btn btn-primary" onclick="refreshPaymentRequests()">
+                                <i class="fas fa-sync"></i> تحديث
+                            </button>
+                        </div>
+                        <!-- أدوات البحث والفلترة -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="paymentRequestsSearch" 
+                                           placeholder="البحث في الطلبات...">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <select class="form-control" id="paymentRequestsStatusFilter">
+                                    <option value="">جميع الحالات</option>
+                                    <option value="pending">قيد الانتظار</option>
+                                    <option value="approved">مقبول</option>
+                                    <option value="rejected">مرفوض</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="clearSearchFilters()">
+                                    <i class="fas fa-times"></i> مسح
+                                </button>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="text-muted small text-center" id="requestsStats">
+                                    <i class="fas fa-info-circle"></i> الإحصائيات
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive table-container">
+                                <table class="table table-striped table-hover">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th><i class="fas fa-phone"></i> رقم الهاتف</th>
+                                            <th><i class="fas fa-user"></i> اسم الزبون</th>
+                                            <th><i class="fas fa-building"></i> الشركة</th>
+                                            <th><i class="fas fa-money-bill"></i> المبلغ</th>
+                                            <th><i class="fas fa-info-circle"></i> الحالة</th>
+                                            <th><i class="fas fa-calendar"></i> التاريخ</th>
+                                            <th><i class="fas fa-user-tie"></i> المستخدم</th>
+                                            <th><i class="fas fa-cogs"></i> الإجراءات</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="paymentRequestsTableBody">
+                                        <tr>
+                                            <td colspan="8" class="text-center">جاري التحميل...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal أساسي لتفاصيل الطلب -->
+    <div class="modal fade" id="requestDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">تفاصيل الطلب</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="requestDetailsBody">
+                    <!-- سيتم تحميل التفاصيل هنا -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                    <div id="requestActions">
+                        <!-- أزرار الإجراءات ستظهر هنا -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal إضافة/تعديل مستخدم -->
+    <div class="modal fade" id="userModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="userModalTitle">إضافة مستخدم جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="userForm">
+                        <input type="hidden" id="userId">
+
+                        <!-- معلومات أساسية -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0"><i class="fas fa-user"></i> المعلومات الأساسية</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-user me-1"></i> الاسم *</label>
+                                            <input type="text" class="form-control form-control-lg" id="userName" 
+                                                   required placeholder="أدخل اسم المستخدم"
+                                                   style="border: 2px solid #007bff; border-radius: 8px;">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-phone me-1"></i> رقم الجوال *</label>
+                                            <input type="text" class="form-control form-control-lg" id="userPhone" 
+                                                   required placeholder="09XXXXXXXX"
+                                                   style="border: 2px solid #007bff; border-radius: 8px;">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label"><i class="fas fa-lock me-1"></i> كلمة المرور</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control form-control-lg" id="userPassword" 
+                                               placeholder="أدخل كلمة مرور جديدة"
+                                               style="border: 2px solid #28a745; border-radius: 8px 0 0 8px;">
+                                        <button class="btn btn-outline-success" type="button" 
+                                                onclick="togglePasswordVisibility('userPassword', this)"
+                                                style="border: 2px solid #28a745; border-left: none; border-radius: 0 8px 8px 0;">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        اتركها فارغة في حالة التعديل للاحتفاظ بكلمة المرور الحالية
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- إعدادات الحساب -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-success text-white">
+                                <h6 class="mb-0"><i class="fas fa-cog"></i> إعدادات الحساب</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-wallet me-1 text-warning"></i> الرصيد (ل.س)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text bg-warning text-dark">
+                                                    <i class="fas fa-coins"></i>
+                                                </span>
+                                                <input type="number" class="form-control form-control-lg" id="userBalance" 
+                                                       value="0" step="0.01" min="0"
+                                                       style="border: 2px solid #ffc107; font-weight: bold; font-size: 1.1em;">
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-toggle-on me-1 text-info"></i> حالة الحساب</label>
+                                            <select class="form-control form-control-lg" id="userStatus"
+                                                    style="border: 2px solid #17a2b8; border-radius: 8px;">
+                                                <option value="1">✅ نشط ومفعل</option>
+                                                <option value="0">❌ معطل ومحجوب</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label class="form-label"><i class="fas fa-user-tag me-1 text-primary"></i> نوع المستخدم</label>
+                                            <select class="form-control form-control-lg" id="userRole"
+                                                    style="border: 2px solid #007bff; border-radius: 8px;">
+                                                <option value="user">👤 مستخدم عادي</option>
+                                                <option value="admin">👑 مدير النظام</option>
+                                            </select>
+                                            <small class="text-muted">
+                                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                تغيير نوع المستخدم سيؤثر على صلاحياته في النظام
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- معلومات إضافية للتعديل -->
+                        <div id="editUserInfo" style="display: none;">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> معلومات إضافية</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <strong>تاريخ الإنشاء:</strong> <span id="userCreatedAt">-</span>
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <strong>معرف المستخدم:</strong> <span id="userIdDisplay">-</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-outline-secondary me-auto" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> إلغاء
+                    </button>
+                    <button type="button" class="btn btn-success btn-lg px-4" onclick="saveUser()">
+                        <i class="fas fa-save"></i> حفظ التعديلات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة/تعديل شركة -->
+    <div class="modal fade" id="companyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="companyModalTitle">إضافة شركة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="companyForm">
+                        <input type="hidden" id="companyId">
+                        <div class="mb-3">
+                            <label class="form-label">اسم الشركة</label>
+                            <input type="text" class="form-control" id="companyName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الفئة</label>
+                            <select class="form-control" id="companyCategory" required>
+                                <option value="">اختر الفئة</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">القسم الفرعي</label>
+                            <input type="text" class="form-control" id="companySubcategory" placeholder="مثال: خدمة مميزة، عادية، اقتصادية">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">العمولة (%)</label>
+                            <input type="number" class="form-control" id="companyCommission" value="0" step="0.01" min="0" max="100">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select class="form-control" id="companyStatus">
+                                <option value="1">نشط</option>
+                                <option value="0">معطل</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCompany()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة/تعديل زبون -->
+    <div class="modal fade" id="customerModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="customerModalTitle">إضافة زبون جديد</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="customerForm">
+                        <input type="hidden" id="customerId">
+                        <div class="mb-3">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="text" class="form-control" id="customerPhone" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الاسم</label>
+                            <input type="text" class="form-control" id="customerName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">رقم الجوال</label>
+                            <input type="text" class="form-control" id="customerMobile">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الشركة</label>
+                            <select class="form-control" id="customerCompany">
+                                <option value="">اختر الشركة</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ملاحظات</label>
+                            <textarea class="form-control" id="customerNotes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCustomer()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إدارة الفئات -->
+    <div class="modal fade" id="categoriesModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">إدارة فئات الشركات</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <button class="btn btn-success" onclick="showAddCategoryModal()">
+                            <i class="fas fa-plus"></i> إضافة فئة جديدة
+                        </button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>الاسم</th>
+                                    <th>الأيقونة</th>
+                                    <th>الحالة</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoriesTableBody">
+                                <tr>
+                                    <td colspan="4" class="text-center">جاري التحميل...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة/تعديل فئة -->
+    <div class="modal fade" id="categoryModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="categoryModalTitle">إضافة فئة جديدة</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="categoryForm">
+                        <input type="hidden" id="categoryId">
+                        <div class="mb-3">
+                            <label class="form-label">اسم الفئة</label>
+                            <input type="text" class="form-control" id="categoryName" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">أيقونة الفئة</label>
+                            <select class="form-control" id="categoryIcon">
+                                                               <option value="fas fa-phone">هاتف أرضي - fas fa-phone</option>
+                                <option value="fas fa-mobile-alt">جوال - fas fa-mobile-alt</option>
+                                <option value="fas fa-wifi">إنترنت - fas fa-wifi</option>
+                                <option value="fas fa-tint">مياه - fas fa-tint</option>
+                                <option value="fas fa-bolt">كهرباء - fas fa-bolt</option>
+                                <option value="fas fa-building">عام - fas fa-building</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">الحالة</label>
+                            <select class="form-control" id="categoryStatus">
+                                <option value="1">نشط</option>
+                                <option value="0">معطل</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCategory()">حفظ</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إدارة الرصيد -->
+    <div class="modal fade" id="balanceModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">إدارة رصيد المستخدم</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="balanceUserId">
+                    <div class="mb-3">
+                        <label class="form-label">المستخدم</label>
+                        <p class="form-control-plaintext" id="balanceUserName"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">الرصيد الحالي</label>
+                        <p class="form-control-plaintext"><span id="currentBalance">0</span> ل.س</p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">المبلغ</label>
+                        <input type="number" class="form-control" id="balanceAmount" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">ملاحظات</label>
+                        <textarea class="form-control" id="balanceNotes" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-success" onclick="addBalance()">
+                        <i class="fas fa-plus"></i> إضافة رصيد
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="deductBalance()">
+                        <i class="fas fa-minus"></i> خصم رصيد
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إرسال إشعار -->
+    <div class="modal fade" id="notificationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">إرسال إشعار</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="notificationUserId">
+                    <div class="mb-3">
+                        <label class="form-label">المستخدم</label>
+                        <p class="form-control-plaintext" id="notificationUserName"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">عنوان الإشعار</label>
+                        <input type="text" class="form-control" id="notificationTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">نص الإشعار</label>
+                        <textarea class="form-control" id="notificationMessage" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" onclick="sendNotification()">
+                        <i class="fas fa-paper-plane"></i> إرسال الإشعار
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج رفع نسخة احتياطية -->
+    <div class="modal fade" id="uploadBackupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">رفع نسخة احتياطية</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>تنبيه:</strong> يرجى التأكد من أن النسخة الاحتياطية المرفوعة صحيحة وتحتوي على قاعدة البيانات.
+                    </div>
+                    <form id="uploadBackupForm" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label class="form-label">اختر ملف النسخة الاحتياطية</label>
+                            <input type="file" class="form-control" id="backupFileInput" name="backup_file" accept=".zip" required>
+                            <small class="text-muted">يجب أن يكون الملف بصيغة ZIP</small>
+                        </div>
+                        <div class="mb-3" id="uploadProgress" style="display: none;">
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                    جاري الرفع...
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-success" onclick="uploadBackup()">
+                        <i class="fas fa-upload"></i> رفع النسخة الاحتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج تأكيد الاستعادة -->
+    <div class="modal fade" id="restoreConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">تأكيد استعادة النسخة الاحتياطية</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>تحذير:</strong> سيتم استبدال جميع البيانات الحالية بالنسخة الاحتياطية المختارة.
+                    </div>
+                    <p>هل أنت متأكد من استعادة النسخة الاحتياطية: <strong id="restoreFilename"></strong>؟</p>
+                    <p><small class="text-muted">سيتم إنشاء نسخة احتياطية من البيانات الحالية قبل الاستعادة.</small></p>
+                    <input type="hidden" id="restoreBackupFilename">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRestore()">
+                        <i class="fas fa-undo"></i> استعادة النسخة الاحتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج تفاصيل الزبون -->
+    <div class="modal fade" id="customerDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user"></i> تفاصيل الزبون
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-primary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-address-card"></i> المعلومات الأساسية</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-user me-2 text-primary"></i>الاسم:</strong>
+                                        <span id="customerDetailName" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-phone me-2 text-success"></i>رقم الهاتف:</strong>
+                                        <span id="customerDetailPhone" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-mobile-alt me-2 text-info"></i>رقم الجوال:</strong>
+                                        <span id="customerDetailMobile" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-building me-2 text-warning"></i>الشركة:</strong>
+                                        <span id="customerDetailCompany" class="ms-2"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-header bg-secondary text-white">
+                                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> معلومات إضافية</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-user-plus me-2 text-success"></i>أضافه:</strong>
+                                        <span id="customerDetailAddedBy" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-calendar-plus me-2 text-info"></i>تاريخ الإضافة:</strong>
+                                        <span id="customerDetailCreatedAt" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-user-edit me-2 text-warning"></i>آخر تعديل بواسطة:</strong>
+                                        <span id="customerDetailUpdatedBy" class="ms-2"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-calendar-edit me-2 text-danger"></i>تاريخ آخر تعديل:</strong>
+                                        <span id="customerDetailUpdatedAt" class="ms-2"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row mt-3" id="customerNotesSection" style="display: none;">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0"><i class="fas fa-sticky-note me-2 text-info"></i>الملاحظات</h6>
+                                </div>
+                                <div class="card-body">
+                                    <p id="customerDetailNotes" class="mb-0"></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="editCustomerFromDetails()">
+                        <i class="fas fa-edit"></i> تعديل البيانات
+                    </button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> إغلاق
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- تحميل المكتبات -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <script>
+        // متغيرات عامة للصفحة الإدارية
+        let adminCurrentRequestId = null;
+        let adminPaymentRequests = [];
+        let adminIsLoading = false;
+
+        // تهيئة التطبيق
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('تحميل لوحة الإدارة...');
+            initializeAdminDashboard();
+        });
+
+        // تهيئة لوحة الإدارة
+        function initializeAdminDashboard() {
+            try {
+                // تحميل الإحصائيات الأساسية
+                refreshStats();
+
+                // إعداد مستمعي الأحداث
+                setupEventListeners();
+
+                console.log('تم تهيئة لوحة الإدارة بنجاح');
+            } catch (error) {
+                console.error('خطأ في تهيئة لوحة الإدارة:', error);
+                showMessage('خطأ في تهيئة لوحة الإدارة', 'error');
+            }
+        }
+
+        // إعداد مستمعي الأحداث
+        function setupEventListeners() {
+            // البحث في طلبات التسديد
+            const searchInput = document.getElementById('paymentRequestsSearch');
+            const statusFilter = document.getElementById('paymentRequestsStatusFilter');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', debounce(searchPaymentRequests, 500));
+            }
+
+            if (statusFilter) {
+                statusFilter.addEventListener('change', searchPaymentRequests);
+            }
+
+            // مراقبة تغيير وضع الصيانة
+            const maintenanceMode = document.getElementById('maintenanceMode');
+            if (maintenanceMode) {
+                maintenanceMode.addEventListener('change', function() {
+                    const reasonSection = document.getElementById('maintenanceReasonSection');
+                    if (reasonSection) {
+                        reasonSection.style.display = this.value === 'true' ? 'block' : 'none';
+                    }
+                });
+            }
+        }
+
+        // دالة تأخير البحث
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // إظهار الأقسام الإدارية
+        function showAdminSection(sectionId, clickedElement) {
+            try {
+                console.log('إظهار القسم:', sectionId);
+
+                // تحديث القائمة النشطة
+                document.querySelectorAll('.list-group-item').forEach(item => {
+                    item.classList.remove('active');
+                });
+                if (clickedElement) {
+                    clickedElement.classList.add('active');
+                }
+
+                // إخفاء جميع الأقسام
+                document.querySelectorAll('.admin-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+
+                // إظهار القسم المطلوب
+                const targetSection = document.getElementById(sectionId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                    loadSectionData(sectionId);
+                } else {
+                    throw new Error(`القسم ${sectionId} غير موجود`);
+                }
+
+            } catch (error) {
+                console.error(`خطأ في إظهار القسم ${sectionId}:`, error);
+                showMessage(`خطأ في إظهار القسم المطلوب: ${error.message}`, 'error');
+            }
+        }
+
+        // تحميل بيانات القسم
+        async function loadSectionData(sectionId) {
+            if (adminIsLoading) return;
+
+            try {
+                adminIsLoading = true;
+
+                switch (sectionId) {
+                    case 'adminMain':
+                        await refreshStats();
+                        break;
+                    case 'users':
+                        await loadUsers();
+                        break;
+                    case 'companies':
+                        await loadCompaniesAdmin();
+                        break;
+                    case 'customers':
+                        await loadCustomers();
+                        break;
+                    case 'inquiryRequests':
+                        await loadPaymentRequests();
+                        break;
+                    case 'settings':
+                        await loadSiteSettingsAdmin();
+                        await loadBackups();
+                        break;
+                }
+            } catch (error) {
+                console.error(`خطأ في تحميل بيانات القسم ${sectionId}:`, error);
+                showMessage(`خطأ في تحميل بيانات القسم: ${error.message}`, 'error');
+            } finally {
+                adminIsLoading = false;
+            }
+        }
+
+        // تحديث الإحصائيات
+        async function refreshStats() {
+            try {
+                const response = await fetch('/api/admin-stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateStatsDisplay(stats);
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الإحصائيات:', error);
+                // عرض قيم افتراضية في حالة الخطأ
+                updateStatsDisplay({
+                    users_count: 0,
+                    successful: 0,
+                    pending: 0,
+                    rejected: 0
+                });
+            }
+        }
+
+        // تحديث عرض الإحصائيات
+        function updateStatsDisplay(stats) {
+            const elements = {
+                usersCount: document.getElementById('adminUsersCount'),
+                successful: document.getElementById('adminSuccessful'),
+                pending: document.getElementById('adminPending'),
+                rejected: document.getElementById('adminRejected')
+            };
+
+            Object.keys(elements).forEach(key => {
+                if (elements[key]) {
+                    const value = stats[key.replace('Count', '_count')] || stats[key] || 0;
+                    elements[key].textContent = value;
+                }
+            });
+        }
+
+        // تحميل المستخدمين
+        async function loadUsers() {
+            const tableBody = document.getElementById('usersTableBody');
+            showTableLoading(tableBody, 6, 'جاري تحميل المستخدمين...');
+
+            try {
+                const response = await fetch('/api/users');
+                if (response.ok) {
+                    const users = await response.json();
+                    displayUsers(users);
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل المستخدمين:', error);
+                showTableError(tableBody, 6, error.message, 'loadUsers()');
+            }
+        }
+
+        // عرض المستخدمين
+        function displayUsers(users) {
+            const tableBody = document.getElementById('usersTableBody');
+            if (!tableBody) return;
+
+            if (!users || users.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد مستخدمين</td></tr>';
+                return;
+            }
+
+            let html = '';
+            users.forEach(user => {
+                const statusBadge = user.is_active ? 
+                    '<span class="badge bg-success">نشط</span>' : 
+                    '<span class="badge bg-danger">معطل</span>';
+                const roleBadge = user.role === 'admin' ? 
+                    '<span class="badge bg-primary">مدير</span>' : 
+                    '<span class="badge bg-secondary">مستخدم</span>';
+
+                // تنظيف اسم المستخدم لتجنب مشاكل في JavaScript
+                const safeName = user.name.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+                html += `
+                    <tr>
+                        <td>
+                            <span class="text-primary fw-bold user-name-clickable" 
+                                  onclick="editUser(${user.id}); event.stopPropagation();" 
+                                  style="cursor: pointer; text-decoration: underline; transition: all 0.2s ease;"
+                                  title="اضغط لتعديل البيانات"
+                                  onmouseover="this.style.color='#0056b3'; this.style.textShadow='0 0 2px rgba(0,86,179,0.3)';"
+                                  onmouseout="this.style.color=''; this.style.textShadow='';">
+                                <i class="fas fa-user me-2"></i>
+                                ${user.name}
+                            </span>
+                        </td>
+                        <td>${user.phone}</td>
+                        <td>${user.balance} ل.س</td>
+                        <td>${roleBadge}</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-success" onclick="manageUserBalance(${user.id}, '${safeName}', ${user.balance})" title="إدارة الرصيد">
+                                    <i class="fas fa-wallet"></i>
+                                </button>
+                                <button class="btn btn-outline-info" onclick="sendUserNotification(${user.id}, '${safeName}')" title="إرسال إشعار">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                                ${user.role !== 'admin' ? `
+                                    <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="حذف">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        // تحميل طلبات التسديد
+        async function loadPaymentRequests() {
+            const tableBody = document.getElementById('paymentRequestsTableBody');
+            showTableLoading(tableBody, 8, 'جاري تحميل طلبات التسديد...');
+
+            try {
+                const response = await fetch('/api/payment-requests');
+                if (response.ok) {
+                    adminPaymentRequests = await response.json();
+                    displayPaymentRequests(adminPaymentRequests);
+                    updateRequestsStatistics();
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل طلبات التسديد:', error);
+                showTableError(tableBody, 8, error.message, 'loadPaymentRequests()');
+            }
+        }
+
+        // تحديث طلبات التسديد
+        function refreshPaymentRequests() {
+            loadPaymentRequests();
+        }
+
+        // عرض طلبات التسديد
+        function displayPaymentRequests(requests) {
+            const tableBody = document.getElementById('paymentRequestsTableBody');
+            if (!tableBody) return;
+
+            // تطبيق الفلتر والبحث
+            const searchTerm = document.getElementById('paymentRequestsSearch')?.value.toLowerCase() || '';
+            const statusFilter = document.getElementById('paymentRequestsStatusFilter')?.value || '';
+
+            let filteredRequests = requests;
+            if (searchTerm || statusFilter) {
+                filteredRequests = requests.filter(request => {
+                    const matchesSearch = !searchTerm || 
+                        (request.phone_number && request.phone_number.toLowerCase().includes(searchTerm)) ||
+                        (request.customer_name && request.customer_name.toLowerCase().includes(searchTerm)) ||
+                        (request.company_name && request.company_name.toLowerCase().includes(searchTerm));
+
+                    const matchesStatus = !statusFilter || request.status === statusFilter;
+
+                    return matchesSearch && matchesStatus;
+                });
+            }
+
+            if (!filteredRequests || filteredRequests.length === 0) {
+                const message = searchTerm || statusFilter ? 'لا توجد نتائج تطابق البحث' : 'لا توجد طلبات تسديد';
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center">
+                            <div class="alert alert-info d-inline-block">
+                                <i class="fas fa-info-circle"></i> ${message}
+                                ${(searchTerm || statusFilter) ? `
+                                    <br>
+                                    <button class="btn btn-sm btn-outline-info mt-2" onclick="clearSearchFilters()">
+                                        <i class="fas fa-times"></i> مسح الفلاتر
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            filteredRequests.forEach((request) => {
+                const statusBadge = `<span class="badge bg-${getStatusBadgeClass(request.status)}">${getStatusText(request.status)}</span>`;
+                const rowClass = request.status === 'pending' ? 'table-warning' : '';
+
+                html += `
+                    <tr class="request-row ${rowClass}" style="cursor: pointer;" onclick="showRequestDetails(${request.id})">
+                        <td>${request.phone_number || 'غير محدد'}</td>
+                        <td>${request.customer_name || 'غير محدد'}</td>
+                        <td>${request.company_name || 'غير محدد'}</td>
+                        <td>
+                            ${request.amount ? `${request.amount} ل.س` : '<span class="text-warning">غير محدد</span>'}
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>${formatDate(request.created_at)}</td>
+                        <td>${request.user_name || 'غير محدد'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                ${request.status === 'pending' ? `
+                                    <button type="button" class="btn btn-success btn-sm" 
+                                            onclick="event.stopPropagation(); handleRequestAction(${request.id}, 'approve')" 
+                                            title="موافقة">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                            onclick="event.stopPropagation(); handleRequestAction(${request.id}, 'reject')" 
+                                            title="رفض">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                ` : ''}
+                                <button type="button" class="btn btn-info btn-sm" 
+                                        onclick="event.stopPropagation(); showRequestDetails(${request.id})" 
+                                        title="التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        // إظهار تفاصيل الطلب
+        async function showRequestDetails(requestId) {
+            try {
+                adminCurrentRequestId = requestId;
+                showLoadingOverlay('جاري تحميل تفاصيل الطلب...');
+
+                const response = await fetch(`/api/payment-requests/${requestId}`);
+                if (response.ok) {
+                    const request = await response.json();
+                    displayRequestDetailsModal(request);
+                } else if (response.status === 404) {
+                    showMessage('الطلب غير موجود', 'error');
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل تفاصيل الطلب:', error);
+                showMessage('خطأ في تحميل تفاصيل الطلب', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // عرض تفاصيل الطلب في مودال
+        function displayRequestDetailsModal(request) {
+            const modalBody = document.getElementById('requestDetailsBody');
+            const actionsContainer = document.getElementById('requestActions');
+
+            if (!modalBody) return;
+
+            const statusText = getStatusText(request.status);
+            const statusClass = getStatusBadgeClass(request.status);
+
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>معلومات الزبون:</h6>
+                        <p><strong>الاسم:</strong> ${request.customer_name || '-'}</p>
+                        <p><strong>رقم الهاتف:</strong> ${request.phone_number || '-'}</p>
+                        <p><strong>رقم الجوال:</strong> ${request.mobile_number || '-'}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>معلومات الخدمة:</h6>
+                        <p><strong>الشركة:</strong> ${request.company_name || '-'}</p>
+                        <p><strong>الفئة:</strong> ${request.category_name || '-'}</p>
+                        <p><strong>المبلغ:</strong> ${request.amount || 0} ل.س</p>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <p><strong>الحالة:</strong> <span class="badge bg-${statusClass}">${statusText}</span></p>
+                        <p><strong>تاريخ الإنشاء:</strong> ${formatDate(request.created_at)}</p>
+                        ${request.approved_at ? `<p><strong>تاريخ المعالجة:</strong> ${formatDate(request.approved_at)}</p>` : ''}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>المستخدم:</strong> ${request.user_name || '-'}</p>
+                        ${request.notes ? `<p><strong>ملاحظات:</strong> ${request.notes}</p>` : ''}
+                        ${request.staff_notes ? `<p><strong>ملاحظة الموظف:</strong> ${request.staff_notes}</p>` : ''}
+                    </div>
+                </div>
+            `;
+
+            // أزرار الإجراءات
+            if (actionsContainer) {
+                let actionsHtml = '';
+                if (request.status === 'pending') {
+                    actionsHtml = `
+                        <button type="button" class="btn btn-success me-2" onclick="handleRequestAction(${request.id}, 'approve')">
+                            <i class="fas fa-check"></i> موافقة
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="handleRequestAction(${request.id}, 'reject')">
+                            <i class="fas fa-times"></i> رفض
+                        </button>
+                    `;
+                }
+                actionsContainer.innerHTML = actionsHtml;
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('requestDetailsModal'));
+            modal.show();
+        }
+
+        // معالجة إجراءات الطلب
+        async function handleRequestAction(requestId, action) {
+            if (!requestId || !action) return;
+
+            try {
+                let url, method, body, confirmMessage;
+
+                if (action === 'approve') {
+                    url = `/api/payment-requests/${requestId}/approve`;
+                    method = 'POST';
+                    confirmMessage = 'هل أنت متأكد من الموافقة على هذا الطلب؟';
+                } else if (action === 'reject') {
+                    const reason = prompt('يرجى إدخال سبب الرفض:', 'لم يتم استيفاء الشروط المطلوبة');
+                    if (reason === null) return;
+
+                    url = `/api/payment-requests/${requestId}/reject`;
+                    method = 'POST';
+                    body = JSON.stringify({ reason: reason || 'غير محدد' });
+                    confirmMessage = 'هل أنت متأكد من رفض هذا الطلب؟';
+                }
+
+                if (!confirm(confirmMessage)) return;
+
+                showLoadingOverlay('جاري معالجة الطلب...');
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: body
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم معالجة الطلب بنجاح', 'success');
+
+                    // إغلاق المودال
+                    const detailsModal = bootstrap.Modal.getInstance(document.getElementById('requestDetailsModal'));
+                    if (detailsModal) {
+                        detailsModal.hide();
+                    }
+
+                    // إعادة تحميل البيانات
+                    await loadPaymentRequests();
+                    await refreshStats();
+                } else {
+                    showMessage(result.error || 'خطأ في معالجة الطلب', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في معالجة الطلب:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // البحث في طلبات التسديد
+        function searchPaymentRequests() {
+            if (adminPaymentRequests.length > 0) {
+                displayPaymentRequests(adminPaymentRequests);
+            }
+        }
+
+        // مسح فلاتر البحث
+        function clearSearchFilters() {
+            const searchInput = document.getElementById('paymentRequestsSearch');
+            const statusFilter = document.getElementById('paymentRequestsStatusFilter');
+
+            if (searchInput) searchInput.value = '';
+            if (statusFilter) statusFilter.value = '';
+
+            if (adminPaymentRequests.length > 0) {
+                displayPaymentRequests(adminPaymentRequests);
+            }
+        }
+
+        // ===== دوال مساعدة =====
+        // تعديل إحصائيات المعاملات
+        function updateRequestsStatistics() {
+            const statsElement = document.getElementById('requestsStats');
+            if (statsElement && adminPaymentRequests.length > 0) {
+                const pending = adminPaymentRequests.filter(r => r.status === 'pending').length;
+                const approved = adminPaymentRequests.filter(r => r.status === 'approved').length;
+                const rejected = adminPaymentRequests.filter(r => r.status === 'rejected').length;
+
+                statsElement.innerHTML = `
+                    <small class="text-muted">
+                        <i class="fas fa-clock text-warning"></i> قيد الانتظار: ${pending} |
+                        <i class="fas fa-check text-success"></i> مقبول: ${approved} |
+                        <i class="fas fa-times text-danger"></i> مرفوض: ${rejected}
+                    </small>
+                `;
+            }
+        }
+
+        // دوال مساعدة
+        function showTableLoading(tableBody, colspan, message) {
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="${colspan}" class="text-center">
+                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                            <div class="mt-2">${message}</div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function showTableError(tableBody, colspan, message, retryFunction) {
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="${colspan}" class="text-center">
+                            <div class="alert alert-danger d-inline-block">
+                                <i class="fas fa-exclamation-triangle"></i> ${message}
+                                <br>
+                                <button class="btn btn-sm btn-outline-danger mt-2" onclick="${retryFunction}">
+                                    <i class="fas fa-redo"></i> إعادة المحاولة
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
+        function showLoadingOverlay(message = 'جاري التحميل...') {
+            let overlay = document.getElementById('loadingOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'loadingOverlay';
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="text-center text-white">
+                        <div class="spinner-border mb-3" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <div>${message}</div>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            } else {
+                overlay.style.display = 'flex';
+                overlay.querySelector('div:last-child').textContent = message;
+            }
+        }
+
+        function hideLoadingOverlay() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const alertClass = {
+                'success': 'alert-success',
+                'error': 'alert-danger',
+                'warning': 'alert-warning',
+                'info': 'alert-info'
+            }[type] || 'alert-info';
+
+            const iconClass = {
+                'success': 'fas fa-check-circle',
+                'error': 'fas fa-exclamation-triangle',
+                'warning': 'fas fa-exclamation-circle',
+                'info': 'fas fa-info-circle'
+            }[type] || 'fas fa-info-circle';
+
+            // إزالة الرسائل الموجودة
+            document.querySelectorAll('.custom-alert').forEach(alert => alert.remove());
+
+            // إنشاء الرسالة الجديدة
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert ${alertClass} alert-dismissible fade show position-fixed custom-alert`;
+            alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; max-width: 400px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);';
+            alertDiv.innerHTML = `
+                <i class="${iconClass} me-2"></i>${message}
+                <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+            `;
+
+            document.body.appendChild(alertDiv);
+
+            // إزالة تلقائية بعد 5 ثوان
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        function getStatusBadgeClass(status) {
+            const classes = {
+                'pending': 'warning',
+                'approved': 'success',
+                'rejected': 'danger'
+            };
+            return classes[status] || 'secondary';
+        }
+
+        function getStatusText(status) {
+            const texts = {
+                'pending': 'قيد الانتظار',
+                'approved': 'مقبول',
+                'rejected': 'مرفوض'
+            };
+            return texts[status] || status;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+
+            // إنشاء كائن التاريخ
+            const date = new Date(dateString);
+
+            // إضافة 3 ساعات لتصحيح التوقيت
+            date.setHours(date.getHours() + 3);
+
+            // تنسيق التاريخ بالصيغة الميلادية العربية
+            return date.toLocaleString('ar-EG', {
+                calendar: 'gregory', // التقويم الميلادي
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+                timeZone: 'Asia/Damascus' // توقيت دمشق
+            });
+        }
+
+        // تحميل الشركات في لوحة الإدارة
+        async function loadCompaniesAdmin() {
+            const tableBody = document.getElementById('companiesTableBody');
+            showTableLoading(tableBody, 6, 'جاري تحميل الشركات...');
+
+            try {
+                const response = await fetch('/api/companies');
+                if (response.ok) {
+                    const companies = await response.json();
+                    console.log('تم تحميل الشركات:', companies.length);
+                    displayCompaniesAdmin(companies);
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الشركات:', error);
+                showTableError(tableBody, 6, error.message, 'loadCompaniesAdmin()');
+            }
+        }
+
+        // عرض الشركات في لوحة الإدارة
+        function displayCompaniesAdmin(companies) {
+            const tableBody = document.getElementById('companiesTableBody');
+            if (!tableBody) return;
+
+            if (!companies || companies.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد شركات</td></tr>';
+                return;
+            }
+
+            let html = '';
+            companies.forEach(company => {
+                const statusBadge = company.is_active ? 
+                    '<span class="badge bg-success">نشط</span>' : 
+                    '<span class="badge bg-danger">معطل</span>';
+
+                html += `
+                    <tr>
+                        <td>
+                            <i class="${company.category_icon || 'fas fa-building'}"></i>
+                            ${company.name}
+                        </td>
+                        <td>${company.category_name || 'غير محدد'}</td>
+                        <td>${company.subcategory || '-'}</td>
+                        <td>${company.commission}%</td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editCompany(${company.id})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteCompany(${company.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        // تحميل الزبائن
+        async function loadCustomers() {
+            const tableBody = document.getElementById('customersTableBody');
+            showTableLoading(tableBody, 6, 'جاري تحميل الزبائن...');
+
+            try {
+                const response = await fetch('/api/customers');
+                if (response.ok) {
+                    const customers = await response.json();
+                    console.log('تم تحميل الزبائن:', customers.length);
+                    displayCustomers(customers);
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الزبائن:', error);
+                showTableError(tableBody, 6, error.message, 'loadCustomers()');
+            }
+
+        }
+
+        // عرض الزبائن
+        function displayCustomers(customers) {
+            const tableBody = document.getElementById('customersTableBody');
+            if (!tableBody) return;
+
+            if (!customers || customers.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد زبائن</td></tr>';
+                return;
+            }
+
+            let html = '';
+            customers.forEach(customer => {
+                html += `
+                    <tr>
+                        <td>${customer.phone_number}</td>
+                        <td>${customer.name}</td>
+                        <td>${customer.mobile_number || '-'}</td>
+                        <td>${customer.company_name}</td>
+                        <td>${customer.notes || '-'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info btn-sm" onclick="showCustomerDetailsAdmin(${customer.id})" title="عرض التفاصيل الكاملة">
+                                    <i class="fas fa-eye"></i> التفاصيل
+                                </button>
+                                <button class="btn btn-outline-primary" onclick="editCustomer(${customer.id})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteCustomer(${customer.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        async function loadSiteSettingsAdmin() {
+            try {
+                const response = await fetch('/api/site-settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    console.log('تم تحميل الإعدادات');
+                } else {
+                    throw new Error('فشل في تحميل الإعدادات');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الإعدادات:', error);
+            }
+        }
+
+        async function loadBackups() {
+            try {
+                const response = await fetch('/api/backups');
+                if (response.ok) {
+                    const backups = await response.json();
+                    console.log('تم تحميل النسخ الاحتياطية:', backups.length);
+                } else {
+                    throw new Error('فشل في تحميل النسخ الاحتياطية');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل النسخ الاحتياطية:', error);
+            }
+        }
+
+        // تحميل إحصائيات الإدارة
+        async function loadAdminStats() {
+            try {
+                const response = await fetch('/api/admin-stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateStatsDisplay(stats);
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الإحصائيات:', error);
+                // عرض قيم افتراضية في حالة الخطأ
+                updateStatsDisplay({
+                    users_count: 0,
+                    successful: 0,
+                    pending: 0,
+                    rejected: 0
+                });
+            }
+        }
+
+        // تحميل إعدادات الموقع للإدارة
+        async function loadSiteSettingsAdmin() {
+            try {
+                const response = await fetch('/api/site-settings');
+                if (response.ok) {
+                    const settings = await response.json();
+                    console.log('تم تحميل إعدادات الموقع:', settings);
+
+                    // ملء النموذج بالإعدادات المحملة
+                    const siteNameField = document.getElementById('siteName');
+                    const announcementField = document.getElementById('announcement');
+                    const maintenanceModeField = document.getElementById('maintenanceMode');
+                    const maintenanceReasonField = document.getElementById('maintenanceReason');
+
+                    if (siteNameField) siteNameField.value = settings.site_name || 'نظام التسديد';
+                    if (announcementField) announcementField.value = settings.announcement || 'مرحباً بكم في نظام تسديد الفواتير';
+                    if (maintenanceModeField) {
+                        maintenanceModeField.value = settings.is_maintenance ? 'true' : 'false';
+                        // تحديث عرض قسم سبب الصيانة
+                        const reasonSection = document.getElementById('maintenanceReasonSection');
+                        if (reasonSection) {
+                            reasonSection.style.display = settings.is_maintenance ? 'block' : 'none';
+                        }
+                    }
+                    if (maintenanceReasonField) maintenanceReasonField.value = settings.maintenance_reason || '';
+
+                } else {
+                    console.error('خطأ في تحميل الإعدادات:', response.status);
+                    setDefaultSiteSettings();
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل إعدادات الموقع:', error);
+                setDefaultSiteSettings();
+            }
+        }
+
+        // تحديد القيم الافتراضية للإعدادات
+        function setDefaultSiteSettings() {
+            const siteNameField = document.getElementById('siteName');
+            const announcementField = document.getElementById('announcement');
+            const maintenanceModeField = document.getElementById('maintenanceMode');
+            const maintenanceReasonField = document.getElementById('maintenanceReason');
+
+            if (siteNameField) siteNameField.value = 'نظام التسديد';
+            if (announcementField) announcementField.value = 'مرحباً بكم في نظام تسديد الفواتير';
+            if (maintenanceModeField) maintenanceModeField.value = 'false';
+            if (maintenanceReasonField) maintenanceReasonField.value = '';
+
+            const reasonSection = document.getElementById('maintenanceReasonSection');
+            if (reasonSection) {
+                reasonSection.style.display = 'none';
+            }
+        }
+
+        // حفظ إعدادات الموقع
+        async function saveSiteSettings() {
+            try {
+                showLoadingOverlay('جاري حفظ الإعدادات...');
+
+                // جمع البيانات من النموذج
+                const siteName = document.getElementById('siteName')?.value?.trim() || '';
+                const announcement = document.getElementById('announcement')?.value?.trim() || '';
+                const maintenanceMode = document.getElementById('maintenanceMode')?.value || 'false';
+                const maintenanceReason = document.getElementById('maintenanceReason')?.value?.trim() || '';
+
+                // التحقق من البيانات
+                if (!siteName) {
+                    showMessage('يرجى إدخال اسم الموقع', 'error');
+                    return;
+                }
+
+                if (!announcement) {
+                    showMessage('يرجى إدخال نص الإعلان', 'error');
+                    return;
+                }
+
+                // إعداد البيانات للإرسال
+                const settingsData = {
+                    site_name: siteName,
+                    announcement: announcement,
+                    is_maintenance: maintenanceMode === 'true',
+                    maintenance_reason: maintenanceReason
+                };
+
+                console.log('إرسال البيانات:', settingsData);
+
+                // إرسال الطلب
+                const response = await fetch('/api/site-settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(settingsData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم حفظ الإعدادات بنجاح', 'success');
+                    console.log('تم حفظ الإعدادات بنجاح');
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الإعدادات', 'error');
+                    console.error('خطأ في حفظ الإعدادات:', result);
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ الإعدادات:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // إنشاء نسخة احتياطية
+        async function createBackup() {
+            try {
+                showLoadingOverlay('جاري إنشاء النسخة الاحتياطية...');
+
+                const response = await fetch('/api/create-backup', {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(`تم إنشاء النسخة الاحتياطية بنجاح: ${result.filename}`, 'success');
+                    loadBackups(); // إعادة تحميل قائمة النسخ الاحتياطية
+                } else {
+                    showMessage(result.error || 'خطأ في إنشاء النسخة الاحتياطية', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في إنشاء النسخة الاحتياطية:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // تحميل النسخ الاحتياطية
+        async function loadBackups() {
+            try {
+                const response = await fetch('/api/backups');
+                if (response.ok) {
+                    const backups = await response.json();
+                    console.log('تم تحميل النسخ الاحتياطية:', backups.length);
+                    displayBackups(backups);
+                } else {
+                    console.error('خطأ في تحميل النسخ الاحتياطية:', response.status);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل النسخ الاحتياطية:', error);
+            }
+        }
+
+        // عرض النسخ الاحتياطية
+        function displayBackups(backups) {
+            const tableBody = document.getElementById('backupsTableBody');
+            if (!tableBody) return;
+
+            if (!backups || backups.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center">لا توجد نسخ احتياطية</td></tr>';
+                return;
+            }
+
+            let html = '';
+            backups.forEach(backup => {
+                const fileSize = backup.file_size ? (backup.file_size / 1024 / 1024).toFixed(2) + ' MB' : 'غير محدد';
+                const createdAt = formatDate(backup.created_at);
+
+                html += `
+                    <tr>
+                        <td>${backup.filename}</td>
+                        <td>${fileSize}</td>
+                        <td>${createdAt}</td>
+                        <td>${backup.created_by || 'غير محدد'}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/api/download-backup/${backup.filename}" class="btn btn-outline-primary" title="تحميل">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-outline-warning" onclick="showRestoreConfirm('${backup.filename}')" title="استعادة">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteBackup(${backup.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        // إظهار تأكيد الاستعادة
+        function showRestoreConfirm(filename) {
+            document.getElementById('restoreFilename').textContent = filename;
+            document.getElementById('restoreBackupFilename').value = filename;
+
+            const modal = new bootstrap.Modal(document.getElementById('restoreConfirmModal'));
+            modal.show();
+        }
+
+        // تأكيد الاستعادة
+        async function confirmRestore() {
+            const filename = document.getElementById('restoreBackupFilename').value;
+
+            try {
+                showLoadingOverlay('جاري استعادة النسخة الاحتياطية...');
+
+                const response = await fetch(`/api/restore-backup/${filename}`, {
+                    method: 'POST'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم استعادة النسخة الاحتياطية بنجاح', 'success');
+
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('restoreConfirmModal'));
+                    if (modal) modal.hide();
+
+                    // إعادة تحميل الصفحة بعد فترة قصيرة
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    showMessage(result.error || 'خطأ في استعادة النسخة الاحتياطية', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في استعادة النسخة الاحتياطية:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // حذف نسخة احتياطية
+        async function deleteBackup(backupId) {
+            if (!confirm('هل أنت متأكد من حذف هذه النسخة الاحتياطية؟')) {
+                return;
+            }
+
+            try {
+                showLoadingOverlay('جاري حذف النسخة الاحتياطية...');
+
+                const response = await fetch(`/api/backups/${backupId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم حذف النسخة الاحتياطية بنجاح', 'success');
+                    loadBackups(); // إعادة تحميل القائمة
+                } else {
+                    showMessage(result.error || 'خطأ في حذف النسخة الاحتياطية', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في حذف النسخة الاحتياطية:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // إظهار مودال رفع نسخة احتياطية
+        function showUploadBackupModal() {
+            const modal = new bootstrap.Modal(document.getElementById('uploadBackupModal'));
+            modal.show();
+        }
+
+        // رفع نسخة احتياطية
+        async function uploadBackup() {
+            const fileInput = document.getElementById('backupFileInput');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                showMessage('يرجى اختيار ملف أولاً', 'error');
+                return;
+            }
+
+            if (!file.name.endsWith('.zip')) {
+                showMessage('يجب أن يكون الملف بصيغة ZIP', 'error');
+                return;
+            }
+
+            try {
+                const progressDiv = document.getElementById('uploadProgress');
+                if (progressDiv) progressDiv.style.display = 'block';
+
+                const formData = new FormData();
+                formData.append('backup_file', file);
+
+                const response = await fetch('/api/upload-backup', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم رفع النسخة الاحتياطية بنجاح', 'success');
+
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('uploadBackupModal'));
+                    if (modal) modal.hide();
+
+                    // مسح النموذج وإعادة تحميل القائمة
+                    document.getElementById('uploadBackupForm').reset();
+                    loadBackups();
+                } else {
+                    showMessage(result.error || 'خطأ في رفع النسخة الاحتياطية', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في رفع النسخة الاحتياطية:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                const progressDiv = document.getElementById('uploadProgress');
+                if (progressDiv) progressDiv.style.display = 'none';
+            }
+        }
+
+        function showAddUserModal() {
+            // إعادة تعيين النموذج
+            document.getElementById('userForm').reset();
+            document.getElementById('userId').value = '';
+
+            // تعيين القيم الافتراضية
+            document.getElementById('userBalance').value = '0';
+            document.getElementById('userRole').value = 'user';
+            document.getElementById('userStatus').value = '1';
+
+            // إخفاء المعلومات الإضافية
+            const editInfo = document.getElementById('editUserInfo');
+            if (editInfo) {
+                editInfo.style.display = 'none';
+            }
+
+            // تغيير عنوان المودال
+            document.getElementById('userModalTitle').innerHTML = `
+                <i class="fas fa-user-plus"></i> إضافة مستخدم جديد
+            `;
+
+            // إظهار المودال
+            const modal = new bootstrap.Modal(document.getElementById('userModal'));
+            modal.show();
+        }
+
+        function showAddCompanyModal() {
+            document.getElementById('companyModalTitle').textContent = 'إضافة شركة جديدة';
+            document.getElementById('companyForm').reset();
+            document.getElementById('companyId').value = '';
+
+            // تحميل الفئات في القائمة
+            loadCategoriesForSelect();
+
+            const modal = new bootstrap.Modal(document.getElementById('companyModal'));
+            modal.show();
+        }
+
+        function showAddCustomerModal() {
+            document.getElementById('customerModalTitle').textContent = 'إضافة زبون جديد';
+            document.getElementById('customerForm').reset();
+            document.getElementById('customerId').value = '';
+
+            // تحميل الشركات في القائمة
+            populateCustomerCompanySelect();
+
+            const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+            modal.show();
+        }
+
+        // تحميل الفئات للقائمة
+        async function loadCategoriesForSelect() {
+            try {
+                const response = await fetch('/api/categories');
+                if (response.ok) {
+                    const categories = await response.json();
+                    const select = document.getElementById('companyCategory');
+                    if (select) {
+                        select.innerHTML = '<option value="">اختر الفئة</option>';
+                        categories.forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category.id;
+                            option.textContent = category.name;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الفئات:', error);
+            }
+        }
+
+        // تحميل الشركات لقائمة الزبائن
+        async function populateCustomerCompanySelect() {
+            try {
+                const response = await fetch('/api/companies');
+                if (response.ok) {
+                    const companies = await response.json();
+                    const select = document.getElementById('customerCompany');
+                    if (select) {
+                        select.innerHTML = '<option value="">اختر الشركة</option>';
+                        companies.forEach(company => {
+                            const option = document.createElement('option');
+                            option.value = company.id;
+                            option.textContent = company.name;
+                            select.appendChild(option);
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الشركات:', error);
+            }
+        }
+
+        // تعديل شركة
+        async function editCompany(companyId) {
+            try {
+                const response = await fetch(`/api/companies/${companyId}`);
+                if (response.ok) {
+                    const company = await response.json();
+
+                    // ملء النموذج ببيانات الشركة
+                    document.getElementById('companyId').value = company.id;
+                    document.getElementById('companyName').value = company.name;
+                    document.getElementById('companySubcategory').value = company.subcategory || '';
+                    document.getElementById('companyCommission').value = company.commission || 0;
+                    document.getElementById('companyStatus').value = company.is_active ? '1' : '0';
+
+                    // تحميل الفئات وتحديد الفئة الحالية
+                    await loadCategoriesForSelect();
+                    if (company.category_id) {
+                        document.getElementById('companyCategory').value = company.category_id;
+                    }
+
+                    // تغيير عنوان المودال
+                    document.getElementById('companyModalTitle').textContent = 'تعديل الشركة';
+
+                    // إظهار المودال
+                    const modal = new bootstrap.Modal(document.getElementById('companyModal'));
+                    modal.show();
+                } else {
+                    showMessage('خطأ في تحميل بيانات الشركة', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الشركة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // حذف شركة
+        async function deleteCompany(companyId) {
+            if (!confirm('هل أنت متأكد من حذف هذه الشركة؟')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/companies/${companyId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم حذف الشركة بنجاح', 'success');
+                    loadCompaniesAdmin(); // إعادة تحميل قائمة الشركات
+                } else {
+                    showMessage(result.error || 'خطأ في حذف الشركة', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حذف الشركة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // تعديل زبون
+        async function editCustomer(customerId) {
+            try {
+                const response = await fetch(`/api/customers/${customerId}`);
+                if (response.ok) {
+                    const customer = await response.json();
+
+                    // ملء النموذج ببيانات الزبون
+                    document.getElementById('customerId').value = customer.id;
+                    document.getElementById('customerPhone').value = customer.phone_number;
+                    document.getElementById('customerName').value = customer.name;
+                    document.getElementById('customerMobile').value = customer.mobile_number || '';
+                    document.getElementById('customerNotes').value = customer.notes || '';
+
+                    // تحميل الشركات وتحديد الشركة الحالية
+                    await populateCustomerCompanySelect();
+                    if (customer.company_id) {
+                        document.getElementById('customerCompany').value = customer.company_id;
+                    }
+
+                    // تغيير عنوان المودال
+                    document.getElementById('customerModalTitle').textContent = 'تعديل الزبون';
+
+                    // إظهار المودال
+                    const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+                    modal.show();
+                } else {
+                    showMessage('خطأ في تحميل بيانات الزبون', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الزبون:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // حذف زبون
+        async function deleteCustomer(customerId) {
+            if (!confirm('هل أنت متأكد من حذف هذا الزبون؟')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/customers/${customerId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم حذف الزبون بنجاح', 'success');
+                    loadCustomers(); // إعادة تحميل قائمة الزبائن
+                } else {
+                    showMessage(result.error || 'خطأ في حذف الزبون', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حذف الزبون:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // حفظ بيانات الشركة
+        async function saveCompany() {
+            const companyId = document.getElementById('companyId').value;
+            const name = document.getElementById('companyName').value.trim();
+            const categoryId = document.getElementById('companyCategory').value;
+            const subcategory = document.getElementById('companySubcategory').value.trim();
+            const commission = parseFloat(document.getElementById('companyCommission').value) || 0;
+            const isActive = document.getElementById('companyStatus').value === '1';
+
+            if (!name || !categoryId) {
+                showMessage('اسم الشركة والفئة مطلوبان', 'error');
+                return;
+            }
+
+            const data = {
+                name: name,
+                category_id: categoryId,
+                subcategory: subcategory,
+                commission: commission,
+                is_active: isActive
+            };
+
+            try {
+                const url = companyId ? `/api/companies/${companyId}` : '/api/companies';
+                const method = companyId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(companyId ? 'تم تحديث الشركة بنجاح' : 'تم إضافة الشركة بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('companyModal'));
+                    if (modal) modal.hide();
+                    loadCompaniesAdmin();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الشركة', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حفظ الشركة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        // حفظ بيانات الزبون
+        async function saveCustomer() {
+            const customerId = document.getElementById('customerId').value;
+            const phoneNumber = document.getElementById('customerPhone').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const mobileNumber = document.getElementById('customerMobile').value.trim();
+            const companyId = document.getElementById('customerCompany').value;
+            const notes = document.getElementById('customerNotes').value.trim();
+
+            if (!phoneNumber || !name) {
+                showMessage('رقم الهاتف والاسم مطلوبان', 'error');
+                return;
+            }
+
+            const data = {
+                phone_number: phoneNumber,
+                name: name,
+                mobile_number: mobileNumber,
+                company_id: companyId || null,
+                notes: notes
+            };
+
+            try {
+                const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
+                const method = customerId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(customerId ? 'تم تحديث الزبون بنجاح' : 'تم إضافة الزبون بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+                    if (modal) modal.hide();
+                    loadCustomers();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الزبون', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حفظ الزبون:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        function showCategoriesModal() {
+            console.log('إدارة الفئات...');
+        }
+
+        // تعديل مستخدم - محسن مع معلومات إضافية
+        async function editUser(userId) {
+            console.log('تعديل بيانات المستخدم:', userId);
+
+            if (!userId) {
+                showMessage('معرف المستخدم غير صحيح', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay('جاري تحميل بيانات المستخدم...');
+
+                const response = await fetch(`/api/users/${userId}`);
+                if (response.ok) {
+                    const user = await response.json();
+                    console.log('تم تحميل بيانات المستخدم:', user);
+
+                    // التأكد من وجود النموذج
+                    const userModal = document.getElementById('userModal');
+                    const userForm = document.getElementById('userForm');
+
+                    if (!userModal || !userForm) {
+                        throw new Error('نموذج المستخدم غير موجود');
+                    }
+
+                    // إعادة تعيين النموذج أولاً
+                    userForm.reset();
+
+                    // ملء النموذج ببيانات المستخدم
+                    document.getElementById('userId').value = user.id;
+                    document.getElementById('userName').value = user.name || '';
+                    document.getElementById('userPhone').value = user.phone || '';
+                    document.getElementById('userPassword').value = ''; // اتركها فارغة للأمان
+                    document.getElementById('userRole').value = user.role || 'user';
+                    document.getElementById('userBalance').value = parseFloat(user.balance) || 0;
+                    document.getElementById('userStatus').value = user.is_active ? '1' : '0';
+
+                    // إظهار المعلومات الإضافية للتعديل
+                    const editInfo = document.getElementById('editUserInfo');
+                    if (editInfo) {
+                        editInfo.style.display = 'block';
+                        const createdAtElement = document.getElementById('userCreatedAt');
+                        const idDisplayElement = document.getElementById('userIdDisplay');
+
+                        if (createdAtElement) {
+                            createdAtElement.textContent = formatDate(user.created_at) || 'غير محدد';
+                        }
+                        if (idDisplayElement) {
+                            idDisplayElement.textContent = user.id || 'غير محدد';
+                        }
+                    }
+
+                    // تغيير عنوان المودال
+                    const modalTitle = document.getElementById('userModalTitle');
+                    if (modalTitle) {
+                        modalTitle.innerHTML = `
+                            <i class="fas fa-user-edit text-primary"></i> تعديل بيانات المستخدم: ${user.name}
+                        `;
+                    }
+
+                    // إخفاء Loading أولاً
+                    hideLoadingOverlay();
+
+                    // إظهار المودال
+                    const modal = new bootstrap.Modal(userModal, {
+                        backdrop: 'static',
+                        keyboard: false
+                    });
+                    modal.show();
+
+                    // التركيز على حقل الاسم
+                    setTimeout(() => {
+                        const nameField = document.getElementById('userName');
+                        if (nameField) {
+                            nameField.focus();
+                        }
+                    }, 500);
+
+                    console.log('تم فتح نموذج التعديل بنجاح');
+                } else {
+                    const errorData = await response.json().catch(() => ({}));
+                    showMessage(errorData.error || `خطأ في تحميل بيانات المستخدم (${response.status})`, 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات المستخدم:', error);
+                if (error.name === 'AbortError') {
+                    showMessage('انتهت مهلة الطلب، يرجى المحاولة مرة أخرى', 'error');
+                } else if (error.message.includes('Failed to fetch')) {
+                    showMessage('فشل في الاتصال بالخادم، تحقق من الاتصال', 'error');
+                } else {
+                    showMessage('خطأ غير متوقع في تحميل البيانات: ' + error.message, 'error');
+                }
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // حذف مستخدم
+        async function deleteUser(userId) {
+            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم حذف المستخدم بنجاح', 'success');
+                    loadUsers(); // إعادة تحميل قائمة المستخدمين
+                } else {
+                    showMessage(result.error || 'خطأ في حذف المستخدم', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حذف المستخدم:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        function manageUserBalance(id, name, balance) {
+            // Populate the balance modal
+            document.getElementById('balanceUserId').value = id;
+            document.getElementById('balanceUserName').textContent = name;
+            document.getElementById('currentBalance').textContent = balance;
+            document.getElementById('balanceAmount').value = ''; // Clear previous amount
+            document.getElementById('balanceNotes').value = '';   // Clear previous notes
+            const modal = new bootstrap.Modal(document.getElementById('balanceModal'));
+            modal.show();
+        }
+
+        // حفظ بيانات المستخدم
+        async function saveUser() {
+            const userId = document.getElementById('userId').value;
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const password = document.getElementById('userPassword').value;
+            const role = document.getElementById('userRole').value;
+            const balance = parseFloat(document.getElementById('userBalance').value) || 0;
+            const isActive = document.getElementById('userStatus').value === '1';
+
+            if (!name || !phone) {
+                showMessage('الاسم ورقم الجوال مطلوبان', 'error');
+                return;
+            }
+
+            const data = {
+                name: name,
+                phone: phone,
+                role: role,
+                balance: balance,
+                is_active: isActive
+            };
+
+            if (password) {
+                data.password = password;
+            }
+
+            try {
+                const url = userId ? `/api/users/${userId}` : '/api/users';
+                const method = userId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(userId ? 'تم تحديث المستخدم بنجاح' : 'تم إضافة المستخدم بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                    if (modal) modal.hide();
+                    loadUsers();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ المستخدم', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حفظ المستخدم:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        async function sendUserNotification(id, name) {
+            document.getElementById('notificationUserId').value = id;
+            document.getElementById('notificationUserName').textContent = name;
+            document.getElementById('notificationTitle').value = '';
+            document.getElementById('notificationMessage').value = '';
+
+            const modal = new bootstrap.Modal(document.getElementById('notificationModal'));
+            modal.show();
+        }
+
+        
+
+        function saveCategory() {
+            console.log('حفظ الفئة...');
+        }
+
+        async function addBalance() {
+             const userId = document.getElementById('balanceUserId').value;
+            const amount = parseFloat(document.getElementById('balanceAmount').value);
+            const notes = document.getElementById('balanceNotes').value;
+
+            if (!userId || !amount) {
+                showMessage('المبلغ مطلوب', 'error');
+                return;
+            }
+
+            const data = {
+                amount: amount,
+                notes: notes
+            };
+
+            try {
+                const response = await fetch(`/api/users/${userId}/add-balance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم إضافة الرصيد بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('balanceModal'));
+                    if (modal) modal.hide();
+                    loadUsers();
+                } else {
+                    showMessage(result.error || 'خطأ في إضافة الرصيد', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في إضافة الرصيد:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        async function deductBalance() {
+            const userId = document.getElementById('balanceUserId').value;
+            const amount = parseFloat(document.getElementById('balanceAmount').value);
+            const notes = document.getElementById('balanceNotes').value;
+
+            if (!userId || !amount) {
+                showMessage('المبلغ مطلوب', 'error');
+                return;
+            }
+
+            const data = {
+                amount: amount,
+                notes: notes
+            };
+
+            try {
+                const response = await fetch(`/api/users/${userId}/deduct-balance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم خصم الرصيد بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('balanceModal'));
+                    if (modal) modal.hide();
+                    loadUsers();
+                } else {
+                    showMessage(result.error || 'خطأ في خصم الرصيد', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في خصم الرصيد:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        async function sendNotification() {
+            const userId = document.getElementById('notificationUserId').value;
+            const title = document.getElementById('notificationTitle').value;
+            const message = document.getElementById('notificationMessage').value;
+
+            if (!userId || !title || !message) {
+                showMessage('العنوان والرسالة مطلوبة', 'error');
+                return;
+            }
+
+            const data = {
+                title: title,
+                message: message
+            };
+
+            try {
+                const response = await fetch(`/api/users/${userId}/send-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم إرسال الإشعار بنجاح', 'success');
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('notificationModal'));
+                    if (modal) modal.hide();
+                } else {
+                    showMessage(result.error || 'خطأ في إرسال الإشعار', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في إرسال الإشعار:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            }
+        }
+
+        function showAddCategoryModal() {
+            console.log('عرض إضافة فئة...');
+        }
+
+        // دالة إظهار/إخفاء كلمة المرور
+        function togglePasswordVisibility(inputId, button) {
+            const input = document.getElementById(inputId);
+            const icon = button.querySelector('i');
+
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+
+        // التأكد من توفر جميع الدوال عالمياً
+        window.showAdminSection = showAdminSection;
+        window.refreshStats = refreshStats;
+        window.refreshPaymentRequests = refreshPaymentRequests;
+        window.searchPaymentRequests = searchPaymentRequests;
+        window.clearSearchFilters = clearSearchFilters;
+        window.showRequestDetails = showRequestDetails;
+        window.handleRequestAction = handleRequestAction;
+        window.loadCompaniesAdmin = loadCompaniesAdmin;
+        window.loadCustomers = loadCustomers;
+        window.loadSiteSettingsAdmin = loadSiteSettingsAdmin;
+        window.loadBackups = loadBackups;
+        window.showAddUserModal = showAddUserModal;
+        window.showAddCompanyModal = showAddCompanyModal;
+        window.showAddCustomerModal = showAddCustomerModal;
+        window.showCategoriesModal = showCategoriesModal;
+        window.editUser = editUser;
+        window.deleteUser = deleteUser;
+        window.editCompany = editCompany;
+        window.deleteCompany = deleteCompany;
+        window.editCustomer = editCustomer;
+        window.deleteCustomer = deleteCustomer;
+        window.saveCompany = saveCompany;
+        window.saveCustomer = saveCustomer;
+        window.manageUserBalance = manageUserBalance;
+        window.saveUser = saveUser;
+        window.saveSiteSettings = saveSiteSettings;
+        window.createBackup = createBackup;
+        window.saveCategory = saveCategory;
+        window.addBalance = addBalance;
+        window.deductBalance = deductBalance;
+        window.sendNotification = sendNotification;
+        window.showAddCategoryModal = showAddCategoryModal;
+        window.sendUserNotification = sendUserNotification;
+        window.displayUsers = displayUsers;
+        window.loadUsers = loadUsers;
+
+        console.log('تم تصدير جميع الدوال الإدارية بنجاح، بما في ذلك editUser');
+    </script>
+</body>
+</html>
