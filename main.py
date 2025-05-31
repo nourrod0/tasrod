@@ -1035,7 +1035,7 @@ def send_telegram_notification(phone, message):
             chat_id = telegram_users[phone]
 
         if chat_id:
-            bot_token = '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE'
+            bot_token = '7815149975:AAH_jJLqghAyYnyEzO8WADhMfRD7UtLgsPE'
             send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
 
             payload = {
