@@ -1,0 +1,28 @@
+{
+  "created_at": "2025-05-31T07:33:02.293906",
+  "created_by": "المدير العام",
+  "total_files": 15,
+  "files_included": [
+    "main.py",
+    "telegram_bot.py",
+    "bills_system.db",
+    "site_settings.json",
+    "requirements.txt",
+    "requirements_telegram.txt",
+    ".replit",
+    "index.html",
+    "templates/maintenance.html",
+    "templates/login.html",
+    "templates/base.html",
+    "templates/admin_dashboard.html",
+    "templates/dashboard.html",
+    "static/style.css",
+    "static/script.js"
+  ],
+  "backup_version": "2.0",
+  "system_info": {
+    "python_version": "Python 3.11",
+    "platform": "Replit",
+    "flask_app": "Bills Management System"
+  }
+}
