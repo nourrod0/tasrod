@@ -2579,7 +2579,7 @@ function clearSearchStatus() {
     }
 }
 
-// دالة عرض العملاء المتعددين للاختيار
+// دالة عرض العملاء المتعددين للاختيار - محسنة
 function showMultipleCustomersSelection(customers, phoneNumber) {
     try {
         console.log(`عرض ${customers.length} عميل للاختيار`);
@@ -2588,66 +2588,173 @@ function showMultipleCustomersSelection(customers, phoneNumber) {
         if (!statusDiv) return;
         
         let html = `
-            <div class="alert alert-success mb-3">
-                <i class="fas fa-users"></i> 
-                تم العثور على ${customers.length} عميل للرقم ${phoneNumber}
-                <br><small class="text-muted mt-1">اختر العميل المطلوب من القائمة التالية:</small>
+            <div class="alert border-0 shadow-lg mb-4" style="border-radius: 20px; background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(32,201,151,0.05) 100%); border-left: 4px solid #28a745;">
+                <div class="d-flex align-items-center">
+                    <div class="bg-success bg-opacity-15 rounded-circle p-3 me-3" style="width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(40,167,69,0.2);">
+                        <i class="fas fa-users text-success fa-lg"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1 fw-bold text-success">تم العثور على ${customers.length} عميل</h5>
+                        <p class="mb-0 text-muted">للرقم <span class="fw-bold text-dark">${phoneNumber}</span> - اختر العميل المطلوب أو أضف بيانات جديدة</p>
+                    </div>
+                </div>
             </div>
-            <div class="row">
         `;
         
         customers.forEach((customer, index) => {
+            const companyBadge = customer.company_name ? `<span class="badge bg-primary bg-opacity-20 text-primary border border-primary border-opacity-25">${customer.company_name}</span>` : '<span class="badge bg-light text-muted">غير محدد</span>';
+            const mobileBadge = customer.mobile_number ? `<span class="badge bg-info bg-opacity-20 text-info border border-info border-opacity-25">${customer.mobile_number}</span>` : '';
+            
             html += `
-                <div class="col-md-6 mb-3">
-                    <div class="card border-primary h-100 customer-selection-card" style="cursor: pointer; transition: all 0.3s ease;" 
+                <div class="mb-4">
+                    <div class="card border-0 shadow-sm customer-result-card" 
+                         style="border-radius: 18px; transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); cursor: pointer; overflow: hidden; position: relative;" 
                          onclick="selectCustomerFromList(${index}, '${phoneNumber}')"
-                         onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 15px rgba(0,123,255,0.3)';"
-                         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='';">
-                        <div class="card-header bg-gradient text-white p-3" style="background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1 fw-bold">
-                                        <i class="fas fa-user me-2"></i>
-                                        ${customer.name || 'غير محدد'}
-                                    </h6>
+                         onmouseover="animateCardHover(this, true)"
+                         onmouseout="animateCardHover(this, false)">
+                        
+                        <!-- شريط ملون في الأعلى -->
+                        <div style="height: 4px; background: linear-gradient(90deg, #007bff 0%, #6f42c1 50%, #28a745 100%);"></div>
+                        
+                        <!-- Header مع الاسم والإجراءات -->
+                        <div class="card-header border-0 bg-white" style="border-radius: 0 0 18px 18px;">
+                            <div class="row align-items-center g-0">
+                                <div class="col">
                                     <div class="d-flex align-items-center">
-                                        <i class="fas fa-building text-warning me-2"></i>
-                                        <span class="fw-bold text-warning">${customer.company_name || 'غير محدد'}</span>
+                                        <!-- أيقونة العميل -->
+                                        <div class="customer-avatar me-3" style="width: 50px; height: 50px; background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">
+                                            <i class="fas fa-user text-white fa-lg"></i>
+                                        </div>
+                                        
+                                        <!-- معلومات أساسية -->
+                                        <div class="flex-grow-1">
+                                            <h5 class="mb-1 fw-bold text-dark customer-name" style="font-size: 1.1rem;">${customer.name || 'غير محدد'}</h5>
+                                            <div class="d-flex flex-wrap gap-2 align-items-center">
+                                                ${companyBadge}
+                                                ${mobileBadge}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="text-end">
-                                    <i class="fas fa-chevron-right fa-lg"></i>
+                                
+                                <!-- زر الاختيار -->
+                                <div class="col-auto">
+                                    <button class="btn btn-primary btn-lg px-4 select-btn" 
+                                            onclick="event.stopPropagation(); selectCustomerFromList(${index}, '${phoneNumber}')"
+                                            style="border-radius: 25px; font-weight: 600; box-shadow: 0 4px 15px rgba(0,123,255,0.4); background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none; transition: all 0.3s ease;">
+                                        <i class="fas fa-hand-pointer me-2"></i>
+                                        <span class="d-none d-sm-inline">اختيار هذا العميل</span>
+                                        <span class="d-sm-none">اختيار</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <div class="card-body p-3">
-                            <div class="row">
+                        
+                        <!-- تفاصيل العميل -->
+                        <div class="card-body pt-0" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                            <div class="row g-3">
+                                <!-- معلومات الاتصال -->
                                 <div class="col-12">
-                                    ${customer.mobile_number ? `
-                                        <div class="mb-2 d-flex align-items-center">
-                                            <i class="fas fa-mobile-alt text-success me-2"></i> 
-                                            <span class="small">${customer.mobile_number}</span>
+                                    <div class="info-section p-3" style="background: rgba(255,255,255,0.7); border-radius: 12px; border-left: 3px solid #007bff;">
+                                        <h6 class="text-primary mb-2 fw-bold">
+                                            <i class="fas fa-phone me-2"></i>معلومات الاتصال
+                                        </h6>
+                                        <div class="row g-2">
+                                            <div class="col-md-6">
+                                                <div class="info-item d-flex align-items-center">
+                                                    <div class="info-icon bg-success bg-opacity-15 rounded-circle me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-phone text-success" style="font-size: 12px;"></i>
+                                                    </div>
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10px; line-height: 1;">رقم الهاتف</small>
+                                                        <span class="fw-bold text-dark" style="font-size: 14px;">${customer.phone_number || 'غير محدد'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            ${customer.mobile_number ? `
+                                            <div class="col-md-6">
+                                                <div class="info-item d-flex align-items-center">
+                                                    <div class="info-icon bg-info bg-opacity-15 rounded-circle me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-mobile-alt text-info" style="font-size: 12px;"></i>
+                                                    </div>
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10px; line-height: 1;">رقم الجوال</small>
+                                                        <span class="fw-bold text-dark" style="font-size: 14px;">${customer.mobile_number}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            ` : ''}
                                         </div>
-                                    ` : ''}
-                                    ${customer.speed ? `
-                                        <div class="mb-2 d-flex align-items-center">
-                                            <i class="fas fa-tachometer-alt text-info me-2"></i> 
-                                            <span class="small">${customer.speed}</span>
-                                        </div>
-                                    ` : ''}
-                                    ${customer.speed_price ? `
-                                        <div class="mb-2 d-flex align-items-center">
-                                            <i class="fas fa-money-bill text-success me-2"></i> 
-                                            <span class="small fw-bold text-success">${customer.speed_price} ل.س</span>
-                                        </div>
-                                    ` : ''}
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="text-center mt-3">
-                                <button class="btn btn-primary btn-sm w-100" 
-                                        onclick="event.stopPropagation(); selectCustomerFromList(${index}, '${phoneNumber}')">
-                                    <i class="fas fa-hand-pointer me-2"></i> اختيار هذا العميل
-                                </button>
+                                
+                                <!-- معلومات الخدمة -->
+                                ${(customer.speed || customer.speed_price) ? `
+                                <div class="col-12">
+                                    <div class="info-section p-3" style="background: rgba(255,255,255,0.7); border-radius: 12px; border-left: 3px solid #28a745;">
+                                        <h6 class="text-success mb-2 fw-bold">
+                                            <i class="fas fa-cogs me-2"></i>تفاصيل الخدمة
+                                        </h6>
+                                        <div class="row g-2">
+                                            ${customer.speed ? `
+                                            <div class="col-md-6">
+                                                <div class="info-item d-flex align-items-center">
+                                                    <div class="info-icon bg-warning bg-opacity-15 rounded-circle me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-tachometer-alt text-warning" style="font-size: 12px;"></i>
+                                                    </div>
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10px; line-height: 1;">السرعة</small>
+                                                        <span class="fw-bold text-dark" style="font-size: 14px;">${customer.speed}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            ` : ''}
+                                            
+                                            ${customer.speed_price ? `
+                                            <div class="col-md-6">
+                                                <div class="info-item d-flex align-items-center">
+                                                    <div class="info-icon bg-success bg-opacity-15 rounded-circle me-2" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                        <i class="fas fa-money-bill text-success" style="font-size: 12px;"></i>
+                                                    </div>
+                                                    <div>
+                                                        <small class="text-muted d-block" style="font-size: 10px; line-height: 1;">السعر الشهري</small>
+                                                        <span class="fw-bold text-success" style="font-size: 14px;">${customer.speed_price} ل.س</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- الملاحظات -->
+                                ${customer.notes ? `
+                                <div class="col-12">
+                                    <div class="info-section p-3" style="background: rgba(255,255,255,0.7); border-radius: 12px; border-left: 3px solid #6c757d;">
+                                        <h6 class="text-secondary mb-2 fw-bold">
+                                            <i class="fas fa-sticky-note me-2"></i>ملاحظات
+                                        </h6>
+                                        <div class="notes-content p-2" style="background: rgba(108,117,125,0.1); border-radius: 8px; font-style: italic;">
+                                            <span style="font-size: 13px; line-height: 1.5;">${customer.notes}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                ` : ''}
+                                
+                                <!-- معلومات النظام -->
+                                <div class="col-12">
+                                    <div class="d-flex justify-content-between align-items-center mt-2 pt-2" style="border-top: 1px solid rgba(0,0,0,0.1);">
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar text-secondary me-1"></i>
+                                            أُضيف في: ${formatDate(customer.created_at)}
+                                        </small>
+                                        <small class="text-primary fw-bold">
+                                            عميل #${index + 1}
+                                        </small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -2656,16 +2763,25 @@ function showMultipleCustomersSelection(customers, phoneNumber) {
         });
         
         html += `
-            </div>
-            <div class="text-center mt-4">
-                <div class="alert alert-info d-inline-block">
-                    <i class="fas fa-info-circle me-2"></i>
-                    لم تجد العميل المطلوب؟
+            <div class="text-center mt-5">
+                <div class="card border-0 shadow-lg" style="border-radius: 20px; background: linear-gradient(135deg, rgba(40,167,69,0.05) 0%, rgba(32,201,151,0.02) 100%);">
+                    <div class="card-body p-4">
+                        <div class="d-flex align-items-center justify-content-center mb-3">
+                            <div class="bg-success bg-opacity-15 rounded-circle p-3 me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-user-plus text-success"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-1 fw-bold text-dark">لم تجد العميل المطلوب؟</h6>
+                                <small class="text-muted">يمكنك إضافة بيانات جديدة لنفس رقم الهاتف</small>
+                            </div>
+                        </div>
+                        <button class="btn btn-success btn-lg px-5 py-3" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')" 
+                                style="border-radius: 30px; font-weight: 600; box-shadow: 0 6px 20px rgba(40,167,69,0.4); background: linear-gradient(135deg, #28a745 0%, #20c997 100%); border: none; transition: all 0.3s ease;">
+                            <i class="fas fa-plus me-2"></i>
+                            <span>إضافة عميل جديد للرقم ${phoneNumber}</span>
+                        </button>
+                    </div>
                 </div>
-                <br>
-                <button class="btn btn-success btn-lg" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')">
-                    <i class="fas fa-plus me-2"></i> إضافة عميل جديد بنفس الرقم
-                </button>
             </div>
         `;
         
@@ -2679,6 +2795,40 @@ function showMultipleCustomersSelection(customers, phoneNumber) {
     } catch (error) {
         console.error('خطأ في عرض العملاء المتعددين:', error);
         showSearchStatus('خطأ في عرض النتائج', 'error');
+    }
+}
+
+// دالة تحريك البطاقة عند التمرير
+function animateCardHover(card, isHover) {
+    const avatar = card.querySelector('.customer-avatar');
+    const selectBtn = card.querySelector('.select-btn');
+    
+    if (isHover) {
+        card.style.transform = 'translateY(-8px) scale(1.02)';
+        card.style.boxShadow = '0 15px 40px rgba(0,123,255,0.2), 0 5px 15px rgba(0,0,0,0.1)';
+        
+        if (avatar) {
+            avatar.style.transform = 'scale(1.1) rotate(5deg)';
+            avatar.style.boxShadow = '0 6px 20px rgba(0,123,255,0.4)';
+        }
+        
+        if (selectBtn) {
+            selectBtn.style.transform = 'translateY(-2px)';
+            selectBtn.style.boxShadow = '0 6px 20px rgba(0,123,255,0.5)';
+        }
+    } else {
+        card.style.transform = 'translateY(0) scale(1)';
+        card.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+        
+        if (avatar) {
+            avatar.style.transform = 'scale(1) rotate(0deg)';
+            avatar.style.boxShadow = '0 4px 15px rgba(0,123,255,0.3)';
+        }
+        
+        if (selectBtn) {
+            selectBtn.style.transform = 'translateY(0)';
+            selectBtn.style.boxShadow = '0 4px 15px rgba(0,123,255,0.4)';
+        }
     }
 }
 

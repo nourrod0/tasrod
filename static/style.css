@@ -488,11 +488,55 @@ body {
     border-radius: 15px;
     overflow: hidden;
     background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    position: relative;
+}
+
+.stats-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,123,255,0.05) 0%, rgba(111,66,193,0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.stats-card-modern:hover::before {
+    opacity: 1;
 }
 
 .stats-card-modern:hover {
-    transform: translateY(-8px) scale(1.02);
-    box-shadow: 0 15px 35px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.08);
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.06);
+}
+
+.stats-card-modern .stat-icon {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.3s ease;
+}
+
+.stats-card-modern:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+/* تحسين أسلوب عرض الإحصائيات في أسفل الصفحة */
+.stats-card-modern .card-body {
+    position: relative;
+    z-index: 1;
+    padding: 1.5rem 1rem;
+}
+
+.stats-card-modern h4 {
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.stats-card-modern .small {
+    font-weight: 500;
+    opacity: 0.8;
 }
 
 .service-card-modern {
@@ -602,49 +646,219 @@ body {
     opacity: 1;
 }
 
-/* تحسين القائمة الجانبية */
-.list-group-item {
+/* تحسين القائمة الجانبية المحدثة */
+.offcanvas {
+    border-radius: 0 20px 20px 0;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    overflow: hidden;
+}
+
+.offcanvas-header {
+    border-bottom: none;
+    position: relative;
+}
+
+.user-avatar {
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    border-left: 4px solid transparent;
-    border-radius: 0 8px 8px 0;
-    margin-bottom: 2px;
+}
+
+.user-avatar:hover {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.balance-section {
+    transition: all 0.3s ease;
+}
+
+.balance-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(40,167,69,0.2);
+}
+
+.balance-icon {
+    transition: all 0.3s ease;
+}
+
+.balance-section:hover .balance-icon {
+    transform: scale(1.1);
+}
+
+/* أنماط عناصر القائمة الجديدة */
+.nav-menu-item {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: 1px solid transparent;
     position: relative;
     overflow: hidden;
 }
 
-.list-group-item::before {
+.nav-menu-item::before {
     content: '';
     position: absolute;
     top: 0;
-    left: 0;
-    width: 0;
+    left: -100%;
+    width: 100%;
     height: 100%;
-    background: linear-gradient(45deg, #007bff, #6f42c1);
-    transition: width 0.3s ease;
-    z-index: 0;
+    background: linear-gradient(90deg, transparent, rgba(0,123,255,0.1), transparent);
+    transition: left 0.5s ease;
 }
 
-.list-group-item:hover::before {
-    width: 4px;
+.nav-menu-item:hover::before {
+    left: 100%;
 }
 
-.list-group-item:hover {
-    background: linear-gradient(90deg, rgba(0,123,255,0.05) 0%, transparent 100%);
-    border-left-color: #007bff;
-    transform: translateX(5px);
-    color: #007bff;
-}
-
-.list-group-item.active {
-    background: linear-gradient(45deg, #007bff, #6f42c1);
-    border-left-color: #0056b3;
+.nav-menu-item:hover {
+    background: linear-gradient(135deg, rgba(0,123,255,0.08) 0%, rgba(111,66,193,0.05) 100%);
+    border-color: rgba(0,123,255,0.2);
     transform: translateX(8px);
+    box-shadow: 0 4px 15px rgba(0,123,255,0.1);
+}
+
+.nav-menu-item.active {
+    background: linear-gradient(135deg, rgba(0,123,255,0.15) 0%, rgba(111,66,193,0.1) 100%);
+    border-color: #007bff;
+    transform: translateX(10px);
+    box-shadow: 0 6px 20px rgba(0,123,255,0.2);
+}
+
+.nav-menu-item:hover .nav-icon {
+    transform: scale(1.1);
     box-shadow: 0 4px 15px rgba(0,123,255,0.3);
 }
 
-.list-group-item.active::before {
-    width: 4px;
-    background: #ffffff;
+.nav-menu-item.active .nav-icon {
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+}
+
+.nav-icon {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* تحسين الإشعارات */
+.notification-btn {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.notification-btn:hover {
+    background: rgba(255,255,255,0.2) !important;
+    border-color: rgba(255,255,255,0.6) !important;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(255,255,255,0.2);
+}
+
+.notification-badge {
+    transition: all 0.3s ease;
+}
+
+@keyframes pulse-notification {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(220,53,69,0.4);
+    }
+    50% {
+        transform: scale(1.1);
+        box-shadow: 0 4px 15px rgba(220,53,69,0.6);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 2px 8px rgba(220,53,69,0.4);
+    }
+}
+
+/* تحسين بطاقات النتائج */
+.customer-result-card {
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+.customer-result-card .info-section {
+    transition: all 0.3s ease;
+}
+
+.customer-result-card:hover .info-section {
+    background: rgba(255,255,255,0.9) !important;
+}
+
+.customer-result-card .info-item .info-icon {
+    transition: all 0.3s ease;
+}
+
+.customer-result-card:hover .info-item .info-icon {
+    transform: scale(1.1);
+}
+
+.customer-result-card .customer-name {
+    transition: all 0.3s ease;
+}
+
+.customer-result-card:hover .customer-name {
+    color: #007bff !important;
+}
+
+/* تحسين النصوص */
+.text-uppercase {
+    letter-spacing: 1px;
+}
+
+/* تحسين الشارات */
+.badge {
+    transition: all 0.3s ease;
+}
+
+.nav-menu-item:hover .badge {
+    transform: scale(1.1);
+}
+
+/* تحسين الأزرار */
+.btn {
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+}
+
+.btn-outline-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(220,53,69,0.3);
+}
+
+/* تحسين responsive للقائمة الجانبية */
+@media (max-width: 768px) {
+    .offcanvas {
+        width: 320px !important;
+    }
+    
+    .offcanvas-header {
+        padding: 1.5rem;
+    }
+    
+    .nav-menu-item {
+        padding: 12px !important;
+    }
+    
+    .nav-icon {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    
+    .balance-section {
+        margin: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .offcanvas {
+        width: 300px !important;
+    }
+    
+    .nav-menu-item div {
+        font-size: 0.9rem;
+    }
+    
+    .nav-menu-item small {
+        font-size: 0.8rem;
+    }
 }
 
 /* تحسين النماذج */
@@ -931,6 +1145,70 @@ fieldset[disabled] .btn {
     background-color: rgba(0,123,255,0.05);
 }
 
+/* أنماط بطاقات البحث المحسنة */
+.customer-selection-card-modern {
+    position: relative;
+    overflow: hidden;
+}
+
+.customer-selection-card-modern::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0,123,255,0.03) 0%, rgba(111,66,193,0.03) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.customer-selection-card-modern:hover::before {
+    opacity: 1;
+}
+
+.customer-selection-card-modern:hover {
+    border-color: #007bff !important;
+}
+
+.customer-selection-card-modern .btn {
+    transition: all 0.3s ease;
+}
+
+.customer-selection-card-modern .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.4) !important;
+}
+
+/* تحسين الأيقونات في البطاقات */
+.customer-selection-card-modern .bg-opacity-10 {
+    transition: all 0.3s ease;
+}
+
+.customer-selection-card-modern:hover .bg-opacity-10 {
+    transform: scale(1.05);
+}
+
+/* تحسين النصوص */
+.customer-selection-card-modern .fw-bold {
+    font-weight: 600 !important;
+}
+
+.customer-selection-card-modern small {
+    font-weight: 500;
+}
+
+/* تحسين المسافات */
+.customer-selection-card-modern .card-header {
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.customer-selection-card-modern .card-body {
+    background: rgba(255,255,255,0.8);
+    backdrop-filter: blur(10px);
+}
+
 /* تحسين نموذج التسديد للشاشات الصغيرة */
 @media (max-width: 768px) {
     #serviceRequestModal .modal-dialog {
@@ -955,14 +1233,39 @@ fieldset[disabled] .btn {
         min-height: 42px;
     }
     
-    .customer-selection-card .d-flex {
-        flex-direction: column !important;
-        align-items: stretch !important;
+    /* تحسين بطاقات البحث للشاشات الصغيرة */
+    .customer-selection-card-modern .card-header .row {
+        align-items: center !important;
     }
     
-    .customer-selection-card .btn {
+    .customer-selection-card-modern .card-header .col-auto {
         margin-top: 0.5rem;
-        align-self: stretch;
+    }
+    
+    .customer-selection-card-modern .btn {
+        width: 100%;
+        min-height: 38px;
+    }
+    
+    .customer-selection-card-modern .card-body .row .col-12 {
+        margin-bottom: 0.5rem;
+    }
+    
+    .customer-selection-card-modern .d-flex {
+        flex-wrap: wrap;
+    }
+    
+    /* تحسين النصوص في الشاشات الصغيرة */
+    .customer-selection-card-modern h6 {
+        font-size: 0.95rem;
+    }
+    
+    .customer-selection-card-modern small {
+        font-size: 0.8rem;
+    }
+    
+    .customer-selection-card-modern .fw-bold {
+        font-size: 0.85rem;
     }
 }
 
