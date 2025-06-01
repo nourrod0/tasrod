@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block title %}لوحة تحكم المستخدم - {{ session.user_name }}{% endblock %}
@@ -32,21 +31,20 @@
                         </div>
                         <div class="col-md-3 text-end">
                             <div class="d-flex justify-content-end gap-3">
-                                <!-- زر القائمة الجانبية -->
-                                <button class="btn btn-outline-light" onclick="toggleSidebar()" id="sidebarToggle">
-                                    <i class="fas fa-bars me-2"></i>
-                                    القائمة
-                                </button>
-                                <!-- زر الإشعارات -->
-                                <button class="btn btn-outline-light position-relative d-flex align-items-center" onclick="showSection('notifications')" title="الإشعارات">
-                                    <i class="fas fa-bell me-2"></i>
-                                    <span class="d-none d-md-inline">الإشعارات</span>
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
-                                          id="notificationBadge" style="display: none; font-size: 11px; min-width: 18px; height: 18px; line-height: 1.4;">
+                                <!-- زر الإشعارات المحسن -->
+                                <button class="btn btn-outline-light position-relative d-flex align-items-center notification-btn" 
+                                        onclick="showSection('notifications')" title="الإشعارات"
+                                        style="border-radius: 25px; padding: 10px 16px; transition: all 0.3s ease; border: 2px solid rgba(255,255,255,0.3);">
+                                    <i class="fas fa-bell me-2" style="font-size: 1.1rem;"></i>
+                                    <span class="d-none d-md-inline fw-bold">الإشعارات</span>
+
+                                    <!-- شارة الإشعارات مع تأثيرات -->
+                                    <span class="position-absolute notification-badge" 
+                                          id="notificationBadge" 
+                                          style="display: none; top: -8px; right: -8px; font-size: 10px; min-width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 50%; background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); color: white; font-weight: bold; box-shadow: 0 2px 8px rgba(220,53,69,0.4); border: 2px solid white; animation: pulse-notification 2s infinite;">
                                         0
                                     </span>
                                 </button>
-                                <!-- زر تسجيل الخروج --></old_str>
                                 <!-- زر تسجيل الخروج -->
                                 <a href="/logout" class="btn btn-outline-light">
                                     <i class="fas fa-sign-out-alt me-2"></i>
@@ -91,7 +89,7 @@
                             تاريخ المعاملات
                         </button>
                     </div>
-                </div></old_str>
+                </div>
                 <div class="card-body">
                     <div class="row g-3 justify-content-center">
                         <div class="col-lg-4 col-md-6 mb-3">
@@ -111,53 +109,116 @@
         </div>
     </div>
 
-    <!-- الإحصائيات السريعة -->
+    <!-- القائمة الجانبية كبطاقة أسفل الخدمات -->
     <div class="row mb-4">
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 stats-card-modern">
-                <div class="card-body text-center">
-                    <div class="stat-icon bg-warning bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                        <i class="fas fa-clock fa-lg text-warning"></i>
-                    </div>
-                    <h3 class="mb-1 text-warning" id="pendingRequests">0</h3>
-                    <p class="text-muted mb-0">طلبات قيد الانتظار</p>
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-0">
+                    <h5 class="mb-0">
+                        <i class="fas fa-bars me-2 text-secondary"></i>
+                        القائمة الرئيسية
+                    </h5>
                 </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 stats-card-modern">
-                <div class="card-body text-center">
-                    <div class="stat-icon bg-success bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                        <i class="fas fa-check-circle fa-lg text-success"></i>
+                <div class="card-body">
+                    <!-- معلومات الرصيد -->
+                    <div class="balance-section p-3 mb-4" style="background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(32,201,151,0.05) 100%); border-radius: 15px; border-left: 4px solid #28a745;">
+                        <div class="d-flex align-items-center">
+                            <div class="balance-icon bg-success bg-opacity-15 rounded-circle me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-wallet text-success fa-lg"></i>
+                            </div>
+                            <div>
+                                <small class="text-muted d-block">رصيدك الحالي</small>
+                                <h4 class="mb-0 fw-bold text-success">{{ session.user_balance }} ل.س</h4>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="mb-1 text-success" id="completedTransactions">0</h3>
-                    <p class="text-muted mb-0">عمليات مكتملة</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 stats-card-modern">
-                <div class="card-body text-center">
-                    <div class="stat-icon bg-danger bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                        <i class="fas fa-times-circle fa-lg text-danger"></i>
+
+                    <!-- القائمة الرئيسية -->
+                    <div class="row g-3">
+                        <div class="col-md-4 mb-3">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('mainServices')">
+                                <div class="card-body text-center p-3">
+                                    <div class="nav-icon bg-primary bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-home text-primary"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark">الخدمات الرئيسية</div>
+                                    <small class="text-muted">تسديد الفواتير والخدمات</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('transactions')">
+                                <div class="card-body text-center p-3">
+                                    <div class="nav-icon bg-success bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-exchange-alt text-success"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark">معاملاتي</div>
+                                    <small class="text-muted">تاريخ العمليات والمدفوعات</small>
+                                    <span class="badge bg-primary rounded-pill position-absolute top-0 end-0 me-2 mt-2" id="transactionsBadge" style="display: none;">0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm position-relative" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('notifications')">
+                                <div class="card-body text-center p-3">
+                                    <div class="nav-icon bg-warning bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-bell text-warning"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark">الإشعارات</div>
+                                    <small class="text-muted">رسائل وتنبيهات النظام</small>
+                                    <span class="badge bg-danger rounded-pill position-absolute top-0 end-0 me-2 mt-2" id="sidebarNotificationBadgeInline" 
+                                          style="display: none; font-size: 10px; min-width: 20px; height: 20px; line-height: 20px;">0</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="mb-1 text-danger" id="rejectedRequests">0</h3>
-                    <p class="text-muted mb-0">طلبات مرفوضة</p>
-                </div>
-            </div>
-        </div>
-        <div class="col-lg-3 col-md-6 mb-3">
-            <div class="card border-0 shadow-sm h-100 stats-card-modern">
-                <div class="card-body text-center">
-                    <div class="stat-icon bg-info bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                        <i class="fas fa-calendar-day fa-lg text-info"></i>
+
+                    <!-- قسم الإعدادات -->
+                    <div class="mt-4">
+                        <h6 class="text-muted mb-3 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">
+                            <i class="fas fa-cogs me-2"></i>الإعدادات
+                        </h6>
+
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3">
+                                <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showAnnouncementModal()">
+                                    <div class="card-body text-center p-3">
+                                        <div class="nav-icon bg-info bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-bullhorn text-info"></i>
+                                        </div>
+                                        <div class="fw-bold text-dark">إعلان النظام</div>
+                                        <small class="text-muted">رسائل الإدارة والتحديثات</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showChangePasswordModal()">
+                                    <div class="card-body text-center p-3">
+                                        <div class="nav-icon bg-warning bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fas fa-key text-warning"></i>
+                                        </div>
+                                        <div class="fw-bold text-dark">تغيير كلمة المرور</div>
+                                        <small class="text-muted">تحديث بيانات الأمان</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <h3 class="mb-1 text-info" id="todayTotal">0 ل.س</h3>
-                    <p class="text-muted mb-0">إجمالي اليوم</p>
+
+                    <!-- تذييل القائمة -->
+                    <div class="mt-4 text-center">
+                        <a href="/logout" class="btn btn-outline-danger btn-lg" style="border-radius: 25px;">
+                            <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- صفحة المعاملات -->
     <div id="transactions" class="section-content" style="display: none;">
@@ -261,86 +322,189 @@
             </div>
         </div>
     </div>
+
+    <!-- الإحصائيات السريعة في أسفل الصفحة -->
+    <div class="row mt-5 mb-4">
+        <div class="col-12">
+            <h5 class="text-center mb-4">
+                <i class="fas fa-chart-bar me-2 text-primary"></i>
+                إحصائياتي السريعة
+            </h5>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stats-card-modern">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-warning bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fas fa-clock text-warning"></i>
+                    </div>
+                    <h4 class="mb-1 text-warning" id="pendingRequests">0</h4>
+                    <p class="text-muted mb-0 small">طلبات قيد الانتظار</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stats-card-modern">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-success bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fas fa-check-circle text-success"></i>
+                    </div>
+                    <h4 class="mb-1 text-success" id="completedTransactions">0</h4>
+                    <p class="text-muted mb-0 small">عمليات مكتملة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stats-card-modern">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-danger bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fas fa-times-circle text-danger"></i>
+                    </div>
+                    <h4 class="mb-1 text-danger" id="rejectedRequests">0</h4>
+                    <p class="text-muted mb-0 small">طلبات مرفوضة</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="card border-0 shadow-sm h-100 stats-card-modern">
+                <div class="card-body text-center">
+                    <div class="stat-icon bg-info bg-opacity-10 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <i class="fas fa-calendar-day text-info"></i>
+                    </div>
+                    <h4 class="mb-1 text-info" id="todayTotal">0 ل.س</h4>
+                    <p class="text-muted mb-0 small">إجمالي اليوم</p>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
-<!-- القائمة الجانبية -->
-<div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas">
-    <div class="offcanvas-header bg-primary text-white">
-        <h5 class="offcanvas-title">
-            <i class="fas fa-user-circle me-2"></i>
-            {{ session.user_name }}
-        </h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
-    </div>
-    <div class="offcanvas-body p-0">
-        <!-- معلومات الحساب -->
-        <div class="card border-0 m-3">
-            <div class="card-header bg-gradient text-white" style="background: linear-gradient(45deg, #4a90e2, #3498db);">
-                <h6 class="mb-0">
-                    <i class="fas fa-user-cog me-2"></i>
-                    معلومات الحساب
-                </h6>
+<!-- القائمة الجانبية المحسنة -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" style="width: 350px;">
+    <!-- Header مع خلفية متدرجة -->
+    <div class="offcanvas-header text-white position-relative overflow-hidden" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem;">
+        <!-- نمط خلفية -->
+        <div style="position: absolute; top: -50%; right: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); pointer-events: none;"></div>
+
+        <div class="d-flex align-items-center w-100 position-relative">
+            <!-- صورة المستخدم -->
+            <div class="user-avatar me-3" style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(10px); border: 2px solid rgba(255,255,255,0.3);">
+                <i class="fas fa-user fa-xl text-white"></i>
             </div>
-            <div class="card-body">
-                <div class="text-center mb-3">
-                    <div class="avatar-circle bg-primary bg-opacity-10 rounded-circle mx-auto d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
-                        <i class="fas fa-user fa-xl text-primary"></i>
-                    </div>
+
+            <div class="flex-grow-1">
+                <h5 class="mb-1 fw-bold">{{ session.user_name }}</h5>
+                <div class="d-flex align-items-center">
+                    {% if session.user_role == 'admin' %}
+                        <span class="badge bg-danger bg-opacity-20 text-white border border-white border-opacity-50">
+                            <i class="fas fa-shield-alt me-1"></i>مدير النظام
+                        </span>
+                    {% else %}
+                        <span class="badge bg-primary bg-opacity-20 text-white border border-white border-opacity-50">
+                            <i class="fas fa-user me-1"></i>مستخدم
+                        </span>
+                    {% endif %}
                 </div>
-                <div class="info-item mb-2">
-                    <small class="text-muted">الاسم</small>
-                    <div class="fw-bold">{{ session.user_name }}</div>
+            </div>
+        </div>
+
+        <button type="button" class="btn-close btn-close-white position-absolute" style="top: 1rem; left: 1rem;" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body p-0" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+
+        <!-- معلومات الرصيد -->
+        <div class="balance-section p-3 mx-3 mt-3" style="background: linear-gradient(135deg, rgba(40,167,69,0.1) 0%, rgba(32,201,151,0.05) 100%); border-radius: 15px; border-left: 4px solid #28a745;">
+            <div class="d-flex align-items-center">
+                <div class="balance-icon bg-success bg-opacity-15 rounded-circle me-3" style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-wallet text-success fa-lg"></i>
                 </div>
-                <div class="info-item mb-2">
-                    <small class="text-muted">النوع</small>
-                    <div>
-                        {% if session.user_role == 'admin' %}
-                            <span class="badge bg-danger">مدير النظام</span>
-                        {% else %}
-                            <span class="badge bg-primary">مستخدم</span>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="info-item">
-                    <small class="text-muted">الرصيد</small>
-                    <div class="fw-bold text-success">{{ session.user_balance }} ل.س</div>
+                <div>
+                    <small class="text-muted d-block">رصيدك الحالي</small>
+                    <h4 class="mb-0 fw-bold text-success">{{ session.user_balance }} ل.س</h4>
                 </div>
             </div>
         </div>
 
         <!-- القائمة الرئيسية -->
-        <div class="card border-0 m-3">
-            <div class="card-header bg-white border-0 pb-0">
-                <h6 class="text-muted mb-0">القائمة الرئيسية</h6>
+        <div class="mt-4">
+            <div class="px-3 mb-3">
+                <h6 class="text-muted mb-0 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">
+                    <i class="fas fa-home me-2"></i>القائمة الرئيسية
+                </h6>
             </div>
-            <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action active border-0" onclick="showSection('mainServices'); closeSidebar();">
-                    <i class="fas fa-home me-3 text-primary"></i>
-                    الخدمات الرئيسية
+
+            <div class="nav-menu px-3">
+                <a href="#" class="nav-menu-item active d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showSection('mainServices'); closeSidebar();">
+                    <div class="nav-icon bg-primary bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-home text-primary"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">الخدمات الرئيسية</div>
+                        <small class="text-muted">تسديد الفواتير والخدمات</small>
+                    </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0" onclick="showSection('transactions'); closeSidebar();">
-                    <i class="fas fa-exchange-alt me-3 text-success"></i>
-                    معاملاتي
-                    <span class="badge bg-primary rounded-pill float-end" id="transactionsBadge">0</span>
+
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showSection('transactions'); closeSidebar();">
+                    <div class="nav-icon bg-success bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-exchange-alt text-success"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">معاملاتي</div>
+                        <small class="text-muted">تاريخ العمليات والمدفوعات</small>
+                    </div>
+                    <span class="badge bg-primary rounded-pill" id="transactionsBadge" style="display: none;">0</span>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0" onclick="showSection('notifications'); closeSidebar();">
-                    <i class="fas fa-bell me-3 text-warning"></i>
-                    الإشعارات
-                    <span class="badge bg-danger rounded-pill float-end" id="sidebarNotificationBadge" style="display: none; font-size: 11px; min-width: 18px;">0</span>
+
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3 position-relative" onclick="showSection('notifications'); closeSidebar();">
+                    <div class="nav-icon bg-warning bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-bell text-warning"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">الإشعارات</div>
+                        <small class="text-muted">رسائل وتنبيهات النظام</small>
+                    </div>
+                    <span class="badge bg-danger rounded-pill position-absolute" id="sidebarNotificationBadge" 
+                          style="display: none; top: 0.5rem; left: 0.5rem; font-size: 10px; min-width: 20px; height: 20px; line-height: 20px;">0</span>
                 </a>
             </div>
-            
-            <div class="card-header bg-light border-0 pb-0 pt-3">
-                <h6 class="text-muted mb-0">الإعدادات</h6>
+        </div>
+
+        <!-- قسم الإعدادات -->
+        <div class="mt-4">
+            <div class="px-3 mb-3">
+                <h6 class="text-muted mb-0 fw-bold text-uppercase" style="font-size: 0.8rem; letter-spacing: 1px;">
+                    <i class="fas fa-cogs me-2"></i>الإعدادات
+                </h6>
             </div>
-            <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action border-0" onclick="showAnnouncementModal(); closeSidebar();">
-                    <i class="fas fa-bullhorn me-3 text-info"></i>
-                    إعلان النظام
+
+            <div class="nav-menu px-3">
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showAnnouncementModal(); closeSidebar();">
+                    <div class="nav-icon bg-info bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-bullhorn text-info"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">إعلان النظام</div>
+                        <small class="text-muted">رسائل الإدارة والتحديثات</small>
+                    </div>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action border-0" onclick="showChangePasswordModal(); closeSidebar();">
-                    <i class="fas fa-key me-3 text-warning"></i>
-                    تغيير كلمة المرور
+
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showChangePasswordModal(); closeSidebar();">
+                    <div class="nav-icon bg-warning bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-key text-warning"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">تغيير كلمة المرور</div>
+                        <small class="text-muted">تحديث بيانات الأمان</small>
+                    </div>
+                </a>
+            </div>
+        </div>
+
+        <!-- تذييل القائمة -->
+        <div class="mt-auto p-3">
+            <div class="text-center">
+                <a href="/logout" class="btn btn-outline-danger btn-lg w-100" style="border-radius: 25px;">
+                    <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
                 </a>
             </div>
         </div>
@@ -438,7 +602,7 @@
                                       placeholder="أي ملاحظات إضافية..."></textarea>
                         </div>
                     </fieldset>
-                    
+
                     <input type="hidden" id="serviceCategoryId">
                     <input type="hidden" id="serviceCompanyId">
                     <input type="hidden" id="serviceType">
@@ -604,7 +768,8 @@ function closeSidebar() {
 function updateNotificationBadges(count) {
     const mainBadge = document.getElementById('notificationBadge');
     const sidebarBadge = document.getElementById('sidebarNotificationBadge');
-    
+    const sidebarBadgeInline = document.getElementById('sidebarNotificationBadgeInline');
+
     if (count > 0) {
         if (mainBadge) {
             mainBadge.textContent = count;
@@ -614,9 +779,14 @@ function updateNotificationBadges(count) {
             sidebarBadge.textContent = count;
             sidebarBadge.style.display = 'inline';
         }
+	    if (sidebarBadgeInline) {
+            sidebarBadgeInline.textContent = count;
+            sidebarBadgeInline.style.display = 'inline';
+        }
     } else {
         if (mainBadge) mainBadge.style.display = 'none';
         if (sidebarBadge) sidebarBadge.style.display = 'none';
+		if (sidebarBadgeInline) sidebarBadgeInline.style.display = 'none';
     }
 }
 
@@ -755,7 +925,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const newPassword = newPasswordField?.value || '';
         const confirmPassword = confirmPasswordField?.value || '';
         const matchDiv = document.getElementById('passwordMatch');
-        
+
         if (!matchDiv || !confirmPassword) return;
 
         if (newPassword === confirmPassword) {
@@ -772,7 +942,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function togglePasswordVisibility(fieldId, toggleId) {
     const field = document.getElementById(fieldId);
     const toggle = document.getElementById(toggleId);
-    
+
     if (field && toggle) {
         if (field.type === 'password') {
             field.type = 'text';
@@ -816,14 +986,14 @@ function updateAnnouncementText() {
 document.addEventListener('DOMContentLoaded', function() {
     updateLastLoginTime();
     updateAnnouncementText();
-});</old_str>
+});
 
 // دالة إظهار نافذة إعلان النظام
 function showAnnouncementModal() {
     // التحقق من وجود النافذة
     const modal = document.getElementById('announcementModal');
     const textElement = document.getElementById('announcementModalText');
-    
+
     if (!modal || !textElement) {
         showAlert('نافذة الإعلان غير متاحة', 'error');
         return;
@@ -836,7 +1006,7 @@ function showAnnouncementModal() {
     } else {
         textElement.textContent = 'مرحباً بكم في نظام تسديد الفواتير';
     }
-    
+
     // إظهار النافذة
     const bootstrapModal = new bootstrap.Modal(modal);
     bootstrapModal.show();
@@ -1013,11 +1183,11 @@ document.addEventListener('DOMContentLoaded', function() {
     .modal-dialog {
         margin: 1rem;
     }
-    
+
     .service-card-modern {
         margin-bottom: 1rem;
     }
-    
+
     .stats-card-modern {
         margin-bottom: 1rem;
     }
