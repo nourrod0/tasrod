@@ -1383,37 +1383,97 @@ def search_customer(phone_number):
     if 'user_id' not in session:
         return jsonify({'error': 'غير مصرح'}), 403
 
-    with db_lock:
-        conn = sqlite3.connect('bills_system.db')
-        cursor = conn.cursor()
-        cursor.execute('''
-            SELECT c.*, comp.name as company_name, ips.speed, ips.price
-            FROM customers c
-            LEFT JOIN companies comp ON c.company_id = comp.id
-            LEFT JOIN internet_speeds ips ON c.speed_id = ips.id
-            WHERE c.phone_number = ?
-        ''', (phone_number,))
-        customer = cursor.fetchone()
-        conn.close()
+    print(f"البحث عن العميل برقم: {phone_number}")
 
-    if customer:
-        return jsonify({
-            'found': True,
-            'customer': {
-                'id': customer[0],
-                'phone_number': customer[1],
-                'name': customer[2],
-                'mobile_number': customer[3],
-                'company_id': customer[4],
-                'speed_id': customer[5],
-                'notes': customer[7],
-                'company_name': customer[9],
-                'speed': customer[10],
-                'speed_price': customer[11]
-            }
-        })
-    else:
-        return jsonify({'found': False})
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+            
+            # البحث الدقيق أولاً
+            cursor.execute('''
+                SELECT c.*, 
+                       COALESCE(comp.name, ic.name, 'غير محدد') as company_name, 
+                       ips.speed, ips.price
+                FROM customers c
+                LEFT JOIN companies comp ON c.company_id = comp.id
+                LEFT JOIN internet_companies ic ON c.company_id = ic.id
+                LEFT JOIN internet_speeds ips ON c.speed_id = ips.id
+                WHERE c.phone_number = ?
+            ''', (phone_number,))
+            exact_customers = cursor.fetchall()
+            
+            print(f"نتائج البحث الدقيق: {len(exact_customers) if exact_customers else 0}")
+            
+            # إذا لم يتم العثور على نتائج دقيقة، جرب البحث المرن في رقم الهاتف فقط
+            if not exact_customers:
+                # إزالة الرموز الإضافية والبحث في رقم الهاتف فقط
+                clean_phone = phone_number.replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+                cursor.execute('''
+                    SELECT c.*, 
+                           COALESCE(comp.name, ic.name, 'غير محدد') as company_name, 
+                           ips.speed, ips.price
+                    FROM customers c
+                    LEFT JOIN companies comp ON c.company_id = comp.id
+                    LEFT JOIN internet_companies ic ON c.company_id = ic.id
+                    LEFT JOIN internet_speeds ips ON c.speed_id = ips.id
+                    WHERE REPLACE(REPLACE(REPLACE(c.phone_number, '-', ''), ' ', ''), '(', '') = ?
+                       OR c.phone_number LIKE ?
+                ''', (clean_phone, f'%{clean_phone}%'))
+                exact_customers = cursor.fetchall()
+                print(f"نتائج البحث المرن: {len(exact_customers) if exact_customers else 0}")
+            
+            conn.close()
+
+        if exact_customers:
+            if len(exact_customers) == 1:
+                customer = exact_customers[0]
+                customer_data = {
+                    'id': customer[0],
+                    'phone_number': customer[1],
+                    'name': customer[2],
+                    'mobile_number': customer[3],
+                    'company_id': customer[4],
+                    'speed_id': customer[5],
+                    'notes': customer[7] if len(customer) > 7 else '',
+                    'company_name': customer[8] if len(customer) > 8 else 'غير محدد',
+                    'speed': customer[9] if len(customer) > 9 else '',
+                    'speed_price': customer[10] if len(customer) > 10 else 0
+                }
+                print(f"تم العثور على عميل واحد: {customer_data['name']}")
+                return jsonify({
+                    'found': True,
+                    'customer': customer_data
+                })
+            else:
+                # عدة عملاء
+                customers_list = []
+                for customer in exact_customers:
+                    customers_list.append({
+                        'id': customer[0],
+                        'phone_number': customer[1],
+                        'name': customer[2],
+                        'mobile_number': customer[3],
+                        'company_id': customer[4],
+                        'speed_id': customer[5],
+                        'notes': customer[7] if len(customer) > 7 else '',
+                        'company_name': customer[8] if len(customer) > 8 else 'غير محدد',
+                        'speed': customer[9] if len(customer) > 9 else '',
+                        'speed_price': customer[10] if len(customer) > 10 else 0
+                    })
+                
+                print(f"تم العثور على {len(customers_list)} عميل")
+                return jsonify({
+                    'found': True,
+                    'customers': customers_list
+                })
+        else:
+            print(f"لم يتم العثور على أي عميل للرقم: {phone_number}")
+            return jsonify({'found': False})
+            
+    except Exception as e:
+        print(f"خطأ في البحث عن العميل: {e}")
+        return jsonify({'error': 'خطأ في الخادم'}), 500
 
 # مسارات إدارة المحافظات
 @app.route('/api/provinces', methods=['GET'])
