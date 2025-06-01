@@ -481,7 +481,7 @@ async function loadSiteSettings() {
     }
 }
 
-// إظهار الأقسام المختلفة - محسن
+// إظهار الأقسام المختلفة - محسن مع التمرير التلقائي
 function showSection(sectionId) {
     try {
         console.log(`إظهار القسم: ${sectionId}`);
@@ -506,6 +506,15 @@ function showSection(sectionId) {
         if (targetSection) {
             targetSection.style.display = 'block';
             targetSection.classList.add('fade-in');
+            
+            // التمرير التلقائي إلى القسم المطلوب
+            setTimeout(() => {
+                targetSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            }, 100);
         } else {
             throw new Error(`القسم ${sectionId} غير موجود في الصفحة`);
         }
