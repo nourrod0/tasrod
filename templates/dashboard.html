@@ -148,7 +148,7 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('transactions')">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('transactions'); scrollToSection('transactions');">
                                 <div class="card-body text-center p-3">
                                     <div class="nav-icon bg-success bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
                                         <i class="fas fa-exchange-alt text-success"></i>
@@ -161,7 +161,7 @@
                         </div>
 
                         <div class="col-md-4 mb-3">
-                            <div class="nav-menu-item card h-100 border-0 shadow-sm position-relative" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('notifications')">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm position-relative" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('notifications'); scrollToSection('notifications');">
                                 <div class="card-body text-center p-3">
                                     <div class="nav-icon bg-warning bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
                                         <i class="fas fa-bell text-warning"></i>
@@ -444,7 +444,7 @@
                     </div>
                 </a>
 
-                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showSection('transactions'); closeSidebar();">
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showSection('transactions'); scrollToSection('transactions'); closeSidebar();">
                     <div class="nav-icon bg-success bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-exchange-alt text-success"></i>
                     </div>
@@ -455,7 +455,7 @@
                     <span class="badge bg-primary rounded-pill" id="transactionsBadge" style="display: none;">0</span>
                 </a>
 
-                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3 position-relative" onclick="showSection('notifications'); closeSidebar();">
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3 position-relative" onclick="showSection('notifications'); scrollToSection('notifications'); closeSidebar();">
                     <div class="nav-icon bg-warning bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
                         <i class="fas fa-bell text-warning"></i>
                     </div>
@@ -790,7 +790,7 @@ function updateNotificationBadges(count) {
     }
 }
 
-// تحسين دالة showSection لإخفاء كل شيء عدا القسم المطلوب
+// تحسين دالة showSection لإخفاء كل شيء عدا القسم المطلوب مع التمرير التلقائي
 function showSection(sectionId) {
     // إخفاء جميع الأقسام
     const sections = ['transactions', 'notifications'];
@@ -806,6 +806,15 @@ function showSection(sectionId) {
     if (targetSection) {
         targetSection.style.display = 'block';
         targetSection.classList.add('fade-in');
+        
+        // التمرير التلقائي إلى القسم المطلوب
+        setTimeout(() => {
+            targetSection.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start',
+                inline: 'nearest'
+            });
+        }, 100);
     }
 
     // تحديث القائمة النشطة في الشريط الجانبي
@@ -1010,6 +1019,20 @@ function showAnnouncementModal() {
     // إظهار النافذة
     const bootstrapModal = new bootstrap.Modal(modal);
     bootstrapModal.show();
+}
+
+// دالة التمرير إلى القسم المطلوب
+function scrollToSection(sectionId) {
+    setTimeout(() => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'start',
+                inline: 'nearest'
+            });
+        }
+    }, 300);
 }
 
 // إظهار الصفحة الرئيسية عند تحميل الصفحة
