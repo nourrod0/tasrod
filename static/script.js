@@ -196,15 +196,19 @@ async function updateNotificationStatus() {
             const data = await response.json();
             notificationCount = data.count;
 
-            const badge = document.getElementById('notificationBadge');
-            if (badge) {
-                if (notificationCount > 0) {
-                    badge.textContent = notificationCount;
-                    badge.style.display = 'inline';
-                } else {
-                    badge.style.display = 'none';
+            // تحديث جميع شارات الإشعارات
+            const badges = ['notificationBadge', 'sidebarNotificationBadge'];
+            badges.forEach(badgeId => {
+                const badge = document.getElementById(badgeId);
+                if (badge) {
+                    if (notificationCount > 0) {
+                        badge.textContent = notificationCount;
+                        badge.style.display = 'inline';
+                    } else {
+                        badge.style.display = 'none';
+                    }
                 }
-            }
+            });
         } else if (response.status === 401) {
             handleSessionError(response);
             return;
@@ -619,138 +623,456 @@ function showAlert(message, type = 'info') {
     showMessage(message, type);
 }
 
-// دالة تغيير كلمة المرور
+// دالة تغيير كلمة المرور المحسنة
 async function changePassword() {
-    const currentPassword = document.getElementById('currentPassword')?.value;
-    const newPassword = document.getElementById('newPassword')?.value;
-    const confirmPassword = document.getElementById('confirmPassword')?.value;
+    const currentPassword = document.getElementById('currentPassword')?.value?.trim();
+    const newPassword = document.getElementById('newPassword')?.value?.trim();
+    const confirmPassword = document.getElementById('confirmPassword')?.value?.trim();
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
 
-    // التحقق من البيانات
+    // التحقق من البيانات الأساسية
     if (!currentPassword || !newPassword || !confirmPassword) {
-        showAlert('يرجى ملء جميع الحقول', 'error');
+        showPasswordError('يرجى ملء جميع الحقول المطلوبة');
         return;
     }
 
+    // التحقق من تطابق كلمات المرور
     if (newPassword !== confirmPassword) {
-        showAlert('كلمة المرور الجديدة غير متطابقة', 'error');
+        showPasswordError('كلمة المرور الجديدة وتأكيدها غير متطابقتين');
+        highlightField('confirmPassword', false);
         return;
     }
 
+    // التحقق من طول كلمة المرور
     if (newPassword.length < 6) {
-        showAlert('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        showPasswordError('كلمة المرور يجب أن تكون 6 أحرف على الأقل');
+        highlightField('newPassword', false);
+        return;
+    }
+
+    // التحقق من قوة كلمة المرور
+    const passwordStrength = calculatePasswordStrength(newPassword);
+    if (passwordStrength < 25) {
+        if (!confirm('كلمة المرور ضعيفة. هل تريد المتابعة؟')) {
+            return;
+        }
+    }
+
+    // التحقق من أن كلمة المرور الجديدة مختلفة عن الحالية
+    if (currentPassword === newPassword) {
+        showPasswordError('كلمة المرور الجديدة يجب أن تكون مختلفة عن الحالية');
+        highlightField('newPassword', false);
         return;
     }
 
     try {
+        // تعطيل الزر منعاً للنقر المتكرر
+        if (changePasswordBtn) {
+            changePasswordBtn.disabled = true;
+            changePasswordBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التغيير...';
+        }
+
         showLoader('جاري تغيير كلمة المرور...');
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 ثانية
 
         const response = await fetch('/api/change-password', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
             },
             body: JSON.stringify({
                 current_password: currentPassword,
                 new_password: newPassword,
                 confirm_password: confirmPassword
-            })
+            }),
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
         const result = await response.json();
 
         if (response.ok) {
-            showAlert(result.message, 'success');
+            // إظهار رسالة نجاح مفصلة
+            showPasswordSuccess(result.message || 'تم تغيير كلمة المرور بنجاح');
             
-            // إذا كان مطلوب تسجيل خروج، إعادة توجيه للصفحة الرئيسية
-            if (result.logout_required) {
-                setTimeout(() => {
-                    window.location.href = '/';
-                }, 2000);
+            // مسح النموذج
+            clearPasswordForm();
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+            if (modal) {
+                modal.hide();
             }
+            
+            // إذا كان مطلوب تسجيل خروج، إظهار رسالة تحذيرية وإعادة توجيه
+            if (result.logout_required) {
+                showAlert('تم تغيير كلمة المرور بنجاح. سيتم تسجيل خروجك لضمان الأمان...', 'success');
+                
+                setTimeout(() => {
+                    // إيقاف جميع العمليات
+                    clearInterval(window.notificationInterval);
+                    clearInterval(window.statsInterval);
+                    
+                    // إعادة توجيه
+                    window.location.href = '/?password_changed=1';
+                }, 3000);
+            }
+        } else if (response.status === 400) {
+            const errorMsg = result.error || 'بيانات غير صحيحة';
+            showPasswordError(errorMsg);
+            
+            // تمييز الحقل المناسب حسب نوع الخطأ
+            if (errorMsg.includes('كلمة المرور الحالية')) {
+                highlightField('currentPassword', false);
+            } else if (errorMsg.includes('كلمة المرور الجديدة')) {
+                highlightField('newPassword', false);
+            }
+        } else if (response.status === 401) {
+            showPasswordError('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى');
+            setTimeout(() => window.location.href = '/', 2000);
+        } else if (response.status === 503) {
+            showPasswordError('الخادم غير متاح حالياً. يرجى المحاولة مرة أخرى بعد قليل');
         } else {
-            showAlert(result.error || 'حدث خطأ في تغيير كلمة المرور', 'error');
+            showPasswordError(result.error || 'حدث خطأ غير متوقع في تغيير كلمة المرور');
         }
     } catch (error) {
         console.error('خطأ في تغيير كلمة المرور:', error);
-        showAlert('خطأ في الاتصال بالخادم', 'error');
+        
+        let errorMessage = 'حدث خطأ غير متوقع';
+        if (error.name === 'AbortError') {
+            errorMessage = 'انتهت مهلة العملية. يرجى المحاولة مرة أخرى';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'فشل في الاتصال بالخادم. تحقق من اتصال الإنترنت';
+        } else {
+            errorMessage = error.message;
+        }
+        
+        showPasswordError(errorMessage);
     } finally {
+        // إعادة تفعيل الزر
+        if (changePasswordBtn) {
+            changePasswordBtn.disabled = false;
+            changePasswordBtn.innerHTML = '<i class="fas fa-save"></i> تغيير كلمة المرور';
+        }
+        
         hideLoader();
     }
 }
 
-// إظهار نموذج تغيير كلمة المرور
+// دالة لحساب قوة كلمة المرور
+function calculatePasswordStrength(password) {
+    let strength = 0;
+    
+    // طول كلمة المرور
+    if (password.length >= 8) strength += 25;
+    else if (password.length >= 6) strength += 15;
+    
+    // احتواء أرقام
+    if (/\d/.test(password)) strength += 25;
+    
+    // احتواء أحرف كبيرة وصغيرة
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) strength += 25;
+    
+    // احتواء رموز خاصة
+    if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength += 25;
+    
+    return strength;
+}
+
+// دالة لإظهار رسائل خطأ كلمة المرور
+function showPasswordError(message) {
+    const alertHtml = `
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>خطأ:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    // إضافة الرسالة في بداية النموذج
+    const modalBody = document.querySelector('#changePasswordModal .modal-body');
+    if (modalBody) {
+        // إزالة أي رسائل سابقة
+        const existingAlert = modalBody.querySelector('.alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        modalBody.insertAdjacentHTML('afterbegin', alertHtml);
+    }
+}
+
+// دالة لإظهار رسائل نجاح كلمة المرور
+function showPasswordSuccess(message) {
+    const alertHtml = `
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>نجح:</strong> ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+    
+    const modalBody = document.querySelector('#changePasswordModal .modal-body');
+    if (modalBody) {
+        const existingAlert = modalBody.querySelector('.alert');
+        if (existingAlert) {
+            existingAlert.remove();
+        }
+        
+        modalBody.insertAdjacentHTML('afterbegin', alertHtml);
+    }
+}
+
+// دالة لتمييز الحقول
+function highlightField(fieldId, isValid) {
+    const field = document.getElementById(fieldId);
+    if (field) {
+        field.classList.remove('is-valid', 'is-invalid');
+        field.classList.add(isValid ? 'is-valid' : 'is-invalid');
+        
+        // إزالة التمييز بعد 3 ثوان
+        setTimeout(() => {
+            field.classList.remove('is-valid', 'is-invalid');
+        }, 3000);
+    }
+}
+
+// دالة لمسح نموذج كلمة المرور
+function clearPasswordForm() {
+    const fields = ['currentPassword', 'newPassword', 'confirmPassword'];
+    fields.forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        if (field) {
+            field.value = '';
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+    });
+    
+    // مسح رسائل القوة والتطابق
+    const strengthDiv = document.getElementById('passwordStrength');
+    const matchDiv = document.getElementById('passwordMatch');
+    if (strengthDiv) strengthDiv.innerHTML = '';
+    if (matchDiv) matchDiv.innerHTML = '';
+    
+    // مسح أي رسائل تنبيه
+    const alerts = document.querySelectorAll('#changePasswordModal .alert');
+    alerts.forEach(alert => alert.remove());
+}
+
+// إظهار نموذج تغيير كلمة المرور المحسن
 function showChangePasswordModal() {
-    // التحقق من وجود المودال أولاً
+    // البحث عن النموذج الموجود في الصفحة
     let modal = document.getElementById('changePasswordModal');
 
     if (!modal) {
-        // إنشاء المودال إذا لم يكن موجوداً
-        const modalHtml = `
-            <div class="modal fade" id="changePasswordModal" tabindex="-1">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header bg-warning text-dark">
-                            <h5 class="modal-title">
-                                <i class="fas fa-lock"></i> تغيير كلمة المرور
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
-                            <form id="changePasswordForm" onsubmit="return false;">
-                                <div class="mb-3">
-                                    <label for="currentPassword" class="form-label">كلمة المرور الحالية</label>
-                                    <input type="password" class="form-control" id="currentPassword" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="newPassword" class="form-label">كلمة المرور الجديدة</label>
-                                    <input type="password" class="form-control" id="newPassword" required minlength="6">
-                                    <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="confirmPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
-                                    <input type="password" class="form-control" id="confirmPassword" required minlength="6">
-                                </div>
-                                <div class="alert alert-info">
-                                    <i class="fas fa-info-circle"></i>
-                                    <strong>تنبيه:</strong> عند تغيير كلمة المرور، سيتم إنهاء جميع جلساتك النشطة في الموقع وبوت التليجرام لضمان الأمان.
-                                </div>
-                            </form>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-warning" onclick="changePassword()">
-                                <i class="fas fa-save"></i> تغيير كلمة المرور
-                            </button>
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times"></i> إلغاء
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        modal = document.getElementById('changePasswordModal');
+        console.error('نموذج تغيير كلمة المرور غير موجود في الصفحة');
+        showAlert('نموذج تغيير كلمة المرور غير متاح', 'error');
+        return;
     }
 
-    // مسح النموذج
-    const form = document.getElementById('changePasswordForm');
-    if (form) {
-        form.reset();
+    // مسح النموذج من أي بيانات سابقة
+    clearPasswordForm();
+
+    // إعادة تعيين حالة الزر
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+    if (changePasswordBtn) {
+        changePasswordBtn.disabled = true; // معطل في البداية حتى يتم التحقق من البيانات
+        changePasswordBtn.innerHTML = '<i class="fas fa-save"></i> تغيير كلمة المرور';
     }
 
     // إظهار المودال
-    const bootstrapModal = new bootstrap.Modal(modal);
+    const bootstrapModal = new bootstrap.Modal(modal, {
+        backdrop: 'static',
+        keyboard: true
+    });
     bootstrapModal.show();
 
-    // التركيز على حقل كلمة المرور الحالية
+    // التركيز على حقل كلمة المرور الحالية بعد ظهور المودال
     setTimeout(() => {
         const currentPasswordField = document.getElementById('currentPassword');
         if (currentPasswordField) {
             currentPasswordField.focus();
         }
-    }, 300);
+    }, 500);
+
+    console.log('تم فتح نموذج تغيير كلمة المرور بنجاح');
 }
+
+// دالة لإضافة مستمعي الأحداث لنموذج كلمة المرور
+function setupPasswordFormListeners() {
+    const newPasswordField = document.getElementById('newPassword');
+    const confirmPasswordField = document.getElementById('confirmPassword');
+    const currentPasswordField = document.getElementById('currentPassword');
+
+    if (newPasswordField) {
+        newPasswordField.addEventListener('input', function() {
+            const password = this.value;
+            updatePasswordStrength(password);
+            validatePasswordMatch();
+            validateForm();
+        });
+
+        newPasswordField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                confirmPasswordField?.focus();
+            }
+        });
+    }
+
+    if (confirmPasswordField) {
+        confirmPasswordField.addEventListener('input', function() {
+            validatePasswordMatch();
+            validateForm();
+        });
+
+        confirmPasswordField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const changePasswordBtn = document.getElementById('changePasswordBtn');
+                if (changePasswordBtn && !changePasswordBtn.disabled) {
+                    changePassword();
+                }
+            }
+        });
+    }
+
+    if (currentPasswordField) {
+        currentPasswordField.addEventListener('input', validateForm);
+        
+        currentPasswordField.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                newPasswordField?.focus();
+            }
+        });
+    }
+}
+
+// دالة لتحديث مؤشر قوة كلمة المرور
+function updatePasswordStrength(password) {
+    const strengthDiv = document.getElementById('passwordStrength');
+    if (!strengthDiv) return;
+
+    if (!password) {
+        strengthDiv.innerHTML = '';
+        return;
+    }
+
+    const strength = calculatePasswordStrength(password);
+    let strengthText = '';
+    let strengthClass = '';
+    let suggestions = [];
+
+    if (strength >= 75) {
+        strengthText = 'قوية جداً';
+        strengthClass = 'success';
+    } else if (strength >= 50) {
+        strengthText = 'قوية';
+        strengthClass = 'info';
+    } else if (strength >= 25) {
+        strengthText = 'متوسطة';
+        strengthClass = 'warning';
+    } else {
+        strengthText = 'ضعيفة';
+        strengthClass = 'danger';
+    }
+
+    // إضافة اقتراحات للتحسين
+    if (password.length < 8) suggestions.push('استخدم 8 أحرف على الأقل');
+    if (!/\d/.test(password)) suggestions.push('أضف أرقام');
+    if (!/[a-z]/.test(password)) suggestions.push('أضف أحرف صغيرة');
+    if (!/[A-Z]/.test(password)) suggestions.push('أضف أحرف كبيرة');
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) suggestions.push('أضف رموز خاصة');
+
+    strengthDiv.innerHTML = `
+        <div class="progress mb-2" style="height: 10px;">
+            <div class="progress-bar bg-${strengthClass}" 
+                 style="width: ${strength}%; transition: width 0.3s ease;"
+                 role="progressbar"></div>
+        </div>
+        <small class="text-${strengthClass}">
+            <i class="fas fa-shield-alt me-1"></i>
+            قوة كلمة المرور: <strong>${strengthText}</strong>
+            ${suggestions.length > 0 ? '<br><i class="fas fa-lightbulb me-1 text-warning"></i>' + suggestions.join(' • ') : ''}
+        </small>
+    `;
+}
+
+// دالة للتحقق من تطابق كلمات المرور
+function validatePasswordMatch() {
+    const newPassword = document.getElementById('newPassword')?.value || '';
+    const confirmPassword = document.getElementById('confirmPassword')?.value || '';
+    const matchDiv = document.getElementById('passwordMatch');
+    
+    if (!matchDiv || !confirmPassword) return false;
+
+    if (newPassword === confirmPassword && confirmPassword.length >= 6) {
+        matchDiv.innerHTML = '<small class="text-success"><i class="fas fa-check me-1"></i>كلمات المرور متطابقة</small>';
+        return true;
+    } else if (confirmPassword.length > 0) {
+        matchDiv.innerHTML = '<small class="text-danger"><i class="fas fa-times me-1"></i>كلمات المرور غير متطابقة</small>';
+        return false;
+    } else {
+        matchDiv.innerHTML = '';
+        return false;
+    }
+}
+
+// دالة للتحقق من صحة النموذج
+function validateForm() {
+    const currentPassword = document.getElementById('currentPassword')?.value?.trim() || '';
+    const newPassword = document.getElementById('newPassword')?.value?.trim() || '';
+    const confirmPassword = document.getElementById('confirmPassword')?.value?.trim() || '';
+    const changePasswordBtn = document.getElementById('changePasswordBtn');
+
+    if (!changePasswordBtn) return;
+
+    const isValid = currentPassword.length >= 1 && 
+                   newPassword.length >= 6 && 
+                   confirmPassword.length >= 6 && 
+                   newPassword === confirmPassword &&
+                   currentPassword !== newPassword;
+
+    changePasswordBtn.disabled = !isValid;
+    
+    if (isValid) {
+        changePasswordBtn.classList.remove('btn-outline-warning');
+        changePasswordBtn.classList.add('btn-warning');
+    } else {
+        changePasswordBtn.classList.remove('btn-warning');
+        changePasswordBtn.classList.add('btn-outline-warning');
+    }
+}
+
+// إعداد مستمعي الأحداث عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    // إعداد مستمعي الأحداث لنموذج كلمة المرور
+    setupPasswordFormListeners();
+    
+    // إعداد مستمعي الأحداث للنموذج عند ظهوره
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    if (changePasswordModal) {
+        changePasswordModal.addEventListener('shown.bs.modal', function() {
+            setupPasswordFormListeners();
+            
+            // التركيز على الحقل الأول
+            setTimeout(() => {
+                const currentPasswordField = document.getElementById('currentPassword');
+                if (currentPasswordField) {
+                    currentPasswordField.focus();
+                }
+            }, 100);
+        });
+
+        changePasswordModal.addEventListener('hidden.bs.modal', function() {
+            clearPasswordForm();
+        });
+    }
+});
 
 // دالة showLoader
 function showLoader(message = 'جاري التحميل...') {
