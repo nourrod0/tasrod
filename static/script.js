@@ -619,8 +619,20 @@ function showAlert(message, type = 'info') {
     showMessage(message, type);
 }
 
+// التحقق من الحساب التجريبي
+function isDemoAccount() {
+    return window.sessionStorage?.getItem('user_role') === 'demo' || 
+           document.querySelector('[data-user-role="demo"]') !== null;
+}
+
 // دالة تغيير كلمة المرور
 async function changePassword() {
+    // منع الحساب التجريبي من تغيير كلمة المرور
+    if (isDemoAccount()) {
+        showAlert('هذا حساب تجريبي للاطلاع فقط. لا يمكن تغيير كلمة المرور.', 'warning');
+        return;
+    }
+
     const currentPassword = document.getElementById('currentPassword')?.value;
     const newPassword = document.getElementById('newPassword')?.value;
     const confirmPassword = document.getElementById('confirmPassword')?.value;
@@ -660,6 +672,14 @@ async function changePassword() {
 
         if (response.ok) {
             showAlert(result.message, 'success');
+            
+            // مسح النموذج
+            const form = document.getElementById('changePasswordForm');
+            if (form) form.reset();
+            
+            // إغلاق النافذة
+            const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+            if (modal) modal.hide();
             
             // إذا كان مطلوب تسجيل خروج، إعادة توجيه للصفحة الرئيسية
             if (result.logout_required) {
