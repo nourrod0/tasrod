@@ -8,126 +8,552 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <style>
+        /* تحسينات الخلفية العامة */
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container-fluid {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            margin: 5px;
+            padding: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        /* تحسين شريط الأدوات العلوي */
+        .navbar {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+            min-height: 35px;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.3rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* تحسين القائمة الجانبية */
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.95);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border: none;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-weight: 700;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* تحسين عناصر القائمة */
+        .list-group-item {
+            border: none;
+            padding: 15px 20px;
+            margin: 5px 15px;
+            border-radius: 15px;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            background: rgba(0, 0, 0, 0.02);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .list-group-item::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 123, 255, 0.1), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .list-group-item:hover::before {
+            left: 100%;
+        }
+
+        .list-group-item:hover {
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(111, 66, 193, 0.05) 100%);
+            transform: translateX(10px);
+            box-shadow: 0 8px 25px rgba(0, 123, 255, 0.2);
+            border-left: 4px solid #007bff;
+        }
+
+        .list-group-item.active {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            transform: translateX(15px);
+            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.4);
+        }
+
+        .list-group-item i {
+            transition: all 0.3s ease;
+            margin-left: 10px;
+        }
+
+        .list-group-item:hover i {
+            transform: scale(1.2);
+        }
+
+        /* الأقسام الإدارية */
         .admin-section {
             display: none;
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .admin-section.active {
             display: block;
         }
 
-        .table-hover tbody tr:hover {
-            background-color: rgba(0,123,255,0.1);
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
-        .btn-group-sm .btn {
-            padding: 0.25rem 0.5rem;
-            font-size: 0.75rem;
-        }
-
-        .spinner-border-sm {
-            width: 1rem;
-            height: 1rem;
-        }
-
+        /* تحسين البطاقات الإحصائية */
         .card-stats {
-            transition: transform 0.2s;
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card-stats::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card-stats:hover::before {
+            opacity: 1;
         }
 
         .card-stats:hover {
-            transform: translateY(-2px);
+            transform: translateY(-10px) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
         }
 
+        .card-stats .card-body {
+            padding: 30px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card-stats h3 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 10px 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-stats i {
+            transition: all 0.3s ease;
+        }
+
+        .card-stats:hover i {
+            transform: scale(1.2) rotate(5deg);
+        }
+
+        /* تحسين الجداول */
+        .table-container {
+            max-height: 70vh;
+            overflow-y: auto;
+            border-radius: 15px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .table {
+            margin: 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: none;
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, #495057 0%, #343a40 100%);
+            color: white;
+            border: none;
+            padding: 20px 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.85rem;
+        }
+
+        .table tbody tr {
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .table tbody td {
+            border: none;
+            padding: 15px;
+            vertical-align: middle;
+        }
+
+        .table-hover tbody tr:hover {
+            background: linear-gradient(90deg, rgba(0, 123, 255, 0.1) 0%, rgba(111, 66, 193, 0.05) 100%);
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.1);
+        }
+
+        /* تحسين الأزرار */
+        .btn {
+            border-radius: 15px;
+            padding: 12px 25px;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+            color: #212529;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        }
+
+        .btn-outline-primary:hover {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border-color: transparent;
+        }
+
+        .btn-outline-success:hover {
+            background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+            border-color: transparent;
+        }
+
+        .btn-outline-danger:hover {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            border-color: transparent;
+        }
+
+        .btn-group-sm .btn {
+            padding: 8px 15px;
+            font-size: 0.8rem;
+            border-radius: 10px;
+        }
+
+        /* تحسين الأزرار العائمة */
+        .action-buttons {
+            position: sticky;
+            top: 0;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.95) 100%);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* تحسين الشارات */
+        .badge {
+            border-radius: 10px;
+            padding: 8px 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        /* تحسين النماذج المنبثقة */
+        .modal-content {
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            backdrop-filter: blur(20px);
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border: none;
+            padding: 25px 30px;
+        }
+
+        .modal-body {
+            padding: 30px;
+            background: rgba(255, 255, 255, 0.98);
+        }
+
+        .modal-footer {
+            border: none;
+            padding: 20px 30px;
+            background: rgba(248, 249, 250, 0.98);
+        }
+
+        /* تحسين التنبيهات */
+        .alert {
+            border: none;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, rgba(40, 167, 69, 0.1) 0%, rgba(30, 126, 52, 0.05) 100%);
+            border-left: 4px solid #28a745;
+        }
+
+        .alert-danger {
+            background: linear-gradient(135deg, rgba(220, 53, 69, 0.1) 0%, rgba(200, 35, 51, 0.05) 100%);
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-warning {
+            background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(224, 168, 0, 0.05) 100%);
+            border-left: 4px solid #ffc107;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, rgba(23, 162, 184, 0.1) 0%, rgba(19, 132, 150, 0.05) 100%);
+            border-left: 4px solid #17a2b8;
+        }
+
+        /* تحسينات اللودر */
         .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0,0,0,0.7);
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(33, 37, 41, 0.9) 100%);
+            backdrop-filter: blur(10px);
             display: flex;
             justify-content: center;
             align-items: center;
             z-index: 10000;
         }
 
-        .error-message {
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            color: #721c24;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
+        .spinner-border {
+            width: 4rem;
+            height: 4rem;
+            border-width: 0.4em;
         }
 
-        .success-message {
-            background: #d4edda;
-            border: 1px solid #c3e6cb;
-            color: #155724;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 15px 0;
+        .spinner-border-sm {
+            width: 1.5rem;
+            height: 1.5rem;
         }
 
-        .table-container {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
-
-        .action-buttons {
-            position: sticky;
-            top: 0;
-            background: white;
-            z-index: 100;
-            padding: 10px 0;
-            border-bottom: 1px solid #dee2e6;
-        }
-
+        /* تحسين النصوص القابلة للنقر */
         .user-name-clickable {
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             position: relative;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 10px;
         }
 
         .user-name-clickable:hover {
             color: #0056b3 !important;
-            text-shadow: 0 0 2px rgba(0, 86, 179, 0.3);
-            transform: translateX(2px);
-        }
-
-        .user-name-clickable:active {
-            transform: translateX(1px) scale(0.98);
-            color: #003d82 !important;
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.1) 0%, rgba(0, 86, 179, 0.05) 100%);
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.2);
         }
 
         .user-name-clickable::before {
             content: '';
             position: absolute;
-            bottom: -2px;
-            left: 0;
+            bottom: 0;
+            left: 50%;
             width: 0;
-            height: 2px;
+            height: 3px;
             background: linear-gradient(to right, #007bff, #0056b3);
-            transition: width 0.3s ease;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+            border-radius: 3px;
         }
 
         .user-name-clickable:hover::before {
-            width: 100%;
+            width: 80%;
+        }
+
+        /* تحسينات responsive */
+        @media (max-width: 768px) {
+            .container-fluid {
+                margin: 3px;
+                padding: 8px;
+                border-radius: 10px;
+            }
+
+            .navbar {
+                margin-bottom: 3px;
+                border-radius: 6px;
+                min-height: 30px;
+            }
+
+            .navbar .container-fluid {
+                padding: 2px 8px;
+            }
+
+            .card-stats:hover {
+                transform: translateY(-3px) scale(1.01);
+            }
+
+            .list-group-item:hover {
+                transform: translateX(3px);
+            }
+
+            .btn {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+        }
+
+        /* تأثيرات إضافية */
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* تحسين شريط التمرير */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(248, 249, 250, 0.5);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 123, 255, 0.3);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+        }
+
+        /* رسوم متحركة للأيقونات */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.1);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .card-stats:hover i {
+            animation: pulse 1s infinite;
         }
     </style>
 </head>
 <body>
-    <!-- شريط علوي للإدارة -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-cog"></i> لوحة الإدارة - مؤسسة نور التجارية
+    <!-- شريط علوي للإدارة مضغوط جداً -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="padding: 4px 0; margin-bottom: 10px; min-height: auto;">
+        <div class="container-fluid" style="padding: 4px 15px;">
+            <a class="navbar-brand" href="#" style="display: flex; align-items: center; gap: 6px;">
+                <div style="background: rgba(255,255,255,0.2); padding: 4px; border-radius: 8px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-cog" style="font-size: 0.7rem;"></i>
+                </div>
+                <div>
+                    <div style="font-size: 0.9rem; font-weight: 700; line-height: 1;">لوحة الإدارة</div>
+                    <div style="font-size: 0.6rem; opacity: 0.8; line-height: 1;">نظام التسديد</div>
+                </div>
             </a>
-            <div class="navbar-nav ms-auto">
-                <span class="navbar-text me-3">
-                    <i class="fas fa-user-shield"></i> {{ session.user_name }}
-                </span>
-                <a class="nav-link" href="{{ url_for('logout') }}">
-                    <i class="fas fa-sign-out-alt"></i> خروج
+            <div class="navbar-nav ms-auto" style="display: flex; align-items: center; gap: 6px;">
+                <div class="navbar-text" style="background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 12px; display: flex; align-items: center; gap: 4px; font-size: 0.7rem;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 2px; border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-user-shield" style="font-size: 0.6rem;"></i>
+                    </div>
+                    <span style="font-weight: 600;">{{ session.user_name }}</span>
+                </div>
+                <a class="nav-link" href="{{ url_for('logout') }}" style="background: rgba(255,255,255,0.15); padding: 3px 8px; border-radius: 12px; transition: all 0.3s ease; text-decoration: none; display: flex; align-items: center; gap: 3px; font-size: 0.7rem;" onmouseover="this.style.background='rgba(255,255,255,0.25)'" onmouseout="this.style.background='rgba(255,255,255,0.15)'">
+                    <i class="fas fa-sign-out-alt" style="font-size: 0.6rem;"></i>
+                    <span style="font-weight: 600;">خروج</span>
                 </a>
             </div>
         </div>
@@ -135,30 +561,74 @@
 
     <div class="container-fluid mt-3">
         <div class="row">
-            <!-- قائمة إدارية جانبية -->
+            <!-- قائمة إدارية جانبية محسنة -->
             <div class="col-md-3">
                 <div class="card">
-                    <div class="card-header bg-danger text-white">
-                        <h5><i class="fas fa-tools"></i> إدارة النظام</h5>
+                    <div class="card-header text-white">
+                        <h5 style="margin: 0; display: flex; align-items: center; gap: 15px;">
+                            <div style="background: rgba(255,255,255,0.2); padding: 12px; border-radius: 15px; backdrop-filter: blur(10px);">
+                                <i class="fas fa-tools fa-lg"></i>
+                            </div>
+                            <div>
+                                <div style="font-size: 1.2rem; font-weight: 700;">إدارة النظام</div>
+                                <div style="font-size: 0.8rem; opacity: 0.9;">لوحة التحكم الرئيسية</div>
+                            </div>
+                        </h5>
                     </div>
-                    <div class="list-group list-group-flush">
-                        <a href="#" class="list-group-item list-group-item-action active" onclick="showAdminSection('adminMain', this)">
-                            <i class="fas fa-chart-bar"></i> الإحصائيات
+                    <div class="list-group list-group-flush" style="padding: 10px;">
+                        <a href="#" class="list-group-item list-group-item-action active" onclick="showAdminSection('adminMain', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(23,162,184,0.3);">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                            <div>
+                                <div>الإحصائيات</div>
+                                <small style="opacity: 0.7;">عرض البيانات والتقارير</small>
+                            </div>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('settings', this)">
-                            <i class="fas fa-cog"></i> الإعدادات
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('settings', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(108,117,125,0.3);">
+                                <i class="fas fa-cog"></i>
+                            </div>
+                            <div>
+                                <div>الإعدادات</div>
+                                <small style="opacity: 0.7;">تكوين النظام والنسخ الاحتياطية</small>
+                            </div>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('users', this)">
-                            <i class="fas fa-users"></i> المستخدمين
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('users', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(0,123,255,0.3);">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div>
+                                <div>المستخدمين</div>
+                                <small style="opacity: 0.7;">إدارة حسابات المستخدمين</small>
+                            </div>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('companies', this)">
-                            <i class="fas fa-building"></i> شركات التسديد
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('companies', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(40,167,69,0.3);">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <div>شركات التسديد</div>
+                                <small style="opacity: 0.7;">إدارة الشركات والفئات</small>
+                            </div>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('customers', this)">
-                            <i class="fas fa-address-book"></i> الزبائن
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('customers', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #fd7e14 0%, #e55d00 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(253,126,20,0.3);">
+                                <i class="fas fa-address-book"></i>
+                            </div>
+                            <div>
+                                <div>الزبائن</div>
+                                <small style="opacity: 0.7;">قاعدة بيانات العملاء</small>
+                            </div>
                         </a>
-                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('inquiryRequests', this)">
-                            <i class="fas fa-credit-card"></i> طلبات التسديد
+                        <a href="#" class="list-group-item list-group-item-action" onclick="showAdminSection('inquiryRequests', this)" style="display: flex; align-items: center; gap: 15px; font-weight: 600;">
+                            <div style="background: linear-gradient(135deg, #6f42c1 0%, #59359a 100%); color: white; width: 45px; height: 45px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 15px rgba(111,66,193,0.3);">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div>
+                                <div>طلبات التسديد</div>
+                                <small style="opacity: 0.7;">مراجعة وموافقة الطلبات</small>
+                            </div>
                         </a>
                     </div>
                 </div>
@@ -175,39 +645,59 @@
                         </button>
                     </div>
                     <div class="row">
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-primary text-white card-stats">
+                        <div class="col-md-3 mb-4">
+                            <div class="card card-stats text-white" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%); border: none;">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-users fa-2x mb-2"></i>
-                                    <h5>المستخدمين</h5>
-                                    <h3 id="adminUsersCount">0</h3>
+                                    <div style="background: rgba(255,255,255,0.2); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                        <i class="fas fa-users fa-2x"></i>
+                                    </div>
+                                    <h5 style="font-weight: 600; opacity: 0.9; margin-bottom: 10px;">المستخدمين</h5>
+                                    <h3 id="adminUsersCount" style="font-size: 2.5rem; font-weight: 700; margin: 0;">0</h3>
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                        <small style="opacity: 0.8;"><i class="fas fa-chart-line me-1"></i>إجمالي المستخدمين</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-success text-white card-stats">
+                        <div class="col-md-3 mb-4">
+                            <div class="card card-stats text-white" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%); border: none;">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
-                                    <h5>العمليات الناجحة</h5>
-                                    <h3 id="adminSuccessful">0</h3>
+                                    <div style="background: rgba(255,255,255,0.2); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                        <i class="fas fa-check-circle fa-2x"></i>
+                                    </div>
+                                    <h5 style="font-weight: 600; opacity: 0.9; margin-bottom: 10px;">العمليات الناجحة</h5>
+                                    <h3 id="adminSuccessful" style="font-size: 2.5rem; font-weight: 700; margin: 0;">0</h3>
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                        <small style="opacity: 0.8;"><i class="fas fa-thumbs-up me-1"></i>معاملات موافق عليها</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-warning text-white card-stats">
+                        <div class="col-md-3 mb-4">
+                            <div class="card card-stats text-white" style="background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%); border: none;">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-clock fa-2x mb-2"></i>
-                                    <h5>بانتظار الموافقة</h5>
-                                    <h3 id="adminPending">0</h3>
+                                    <div style="background: rgba(255,255,255,0.2); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                        <i class="fas fa-clock fa-2x"></i>
+                                    </div>
+                                    <h5 style="font-weight: 600; opacity: 0.9; margin-bottom: 10px; color: #212529;">بانتظار الموافقة</h5>
+                                    <h3 id="adminPending" style="font-size: 2.5rem; font-weight: 700; margin: 0; color: #212529;">0</h3>
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(0,0,0,0.2);">
+                                        <small style="opacity: 0.8; color: #212529;"><i class="fas fa-hourglass-half me-1"></i>في انتظار المراجعة</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3 mb-3">
-                            <div class="card bg-danger text-white card-stats">
+                        <div class="col-md-3 mb-4">
+                            <div class="card card-stats text-white" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); border: none;">
                                 <div class="card-body text-center">
-                                    <i class="fas fa-times-circle fa-2x mb-2"></i>
-                                    <h5>العمليات المرفوضة</h5>
-                                    <h3 id="adminRejected">0</h3>
+                                    <div style="background: rgba(255,255,255,0.2); width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                                        <i class="fas fa-times-circle fa-2x"></i>
+                                    </div>
+                                    <h5 style="font-weight: 600; opacity: 0.9; margin-bottom: 10px;">العمليات المرفوضة</h5>
+                                    <h3 id="adminRejected" style="font-size: 2.5rem; font-weight: 700; margin: 0;">0</h3>
+                                    <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
+                                        <small style="opacity: 0.8;"><i class="fas fa-ban me-1"></i>معاملات مرفوضة</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
