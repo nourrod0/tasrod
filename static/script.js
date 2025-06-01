@@ -87,6 +87,76 @@ async function forceReconnect() {
     }
 }
 
+// تحديث ألوان أيقونة الإشعارات
+function updateNotificationIconColors(hasUnreadNotifications) {
+    // البحث عن جميع أيقونات الإشعارات
+    const notificationIcons = document.querySelectorAll('.notification-btn i.fa-bell, .nav-menu-item i.fa-bell');
+    
+    notificationIcons.forEach(icon => {
+        if (hasUnreadNotifications) {
+            // تغيير اللون إلى الأحمر عند وجود إشعارات غير مقروءة
+            icon.style.color = '#dc3545';
+            icon.style.animation = 'shake 2s infinite';
+        } else {
+            // العودة للون الأصلي
+            icon.style.color = '';
+            icon.style.animation = '';
+        }
+    });
+}
+
+// إظهار تنبيه الإشعارات
+function showNotificationAlert(count) {
+    // تجنب إظهار عدة تنبيهات متتالية
+    if (window.notificationAlertShown) {
+        return;
+    }
+    
+    window.notificationAlertShown = true;
+    
+    // إنشاء تنبيه مخصص
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-warning alert-dismissible fade show position-fixed notification-alert';
+    alertDiv.style.cssText = `
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+        min-width: 300px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border-left: 4px solid #dc3545;
+        animation: slideInRight 0.5s ease-out;
+    `;
+    
+    alertDiv.innerHTML = `
+        <div class="d-flex align-items-center">
+            <i class="fas fa-bell text-danger me-3 fa-lg" style="animation: shake 1s infinite;"></i>
+            <div class="flex-grow-1">
+                <strong class="text-danger">إشعارات جديدة!</strong>
+                <div class="small">لديك ${count} إشعار${count > 1 ? 'ات' : ''} غير مقروء${count > 1 ? 'ة' : ''}</div>
+            </div>
+            <button class="btn btn-sm btn-outline-primary ms-2" onclick="showSection('notifications'); this.closest('.notification-alert').remove();">
+                <i class="fas fa-eye"></i> عرض
+            </button>
+        </div>
+        <button type="button" class="btn-close" onclick="this.closest('.notification-alert').remove(); window.notificationAlertShown = false;"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // إزالة التنبيه تلقائياً بعد 8 ثوان
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+            window.notificationAlertShown = false;
+        }
+    }, 8000);
+    
+    // السماح بإظهار تنبيه آخر بعد دقيقة
+    setTimeout(() => {
+        window.notificationAlertShown = false;
+    }, 60000);
+}
+
 // تهيئة محسنة للتطبيق
 document.addEventListener('DOMContentLoaded', function() {
     console.log('تطبيق نظام الفواتير جاهز');
@@ -100,6 +170,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const isLoginPage = window.location.pathname === '/' && document.querySelector('form[action*="login"]');
 
     if (!isLoginPage) {
+        // تعيين علامة للفحص الأول
+        window.firstNotificationCheck = true;
+        
         // تحديث حالة الإشعارات مرة واحدة فقط عند التحميل
         updateNotificationStatus();
 
@@ -194,10 +267,11 @@ async function updateNotificationStatus() {
 
         if (response.ok) {
             const data = await response.json();
+            const previousCount = notificationCount;
             notificationCount = data.count;
 
             // تحديث جميع شارات الإشعارات
-            const badges = ['notificationBadge', 'sidebarNotificationBadge'];
+            const badges = ['notificationBadge', 'sidebarNotificationBadge', 'sidebarNotificationBadgeInline'];
             badges.forEach(badgeId => {
                 const badge = document.getElementById(badgeId);
                 if (badge) {
@@ -215,6 +289,19 @@ async function updateNotificationStatus() {
                     }
                 }
             });
+
+            // تحديث لون أيقونة الإشعارات
+            updateNotificationIconColors(notificationCount > 0);
+
+            // إظهار تنبيه عند دخول الصفحة أو عند وجود إشعارات جديدة
+            if (notificationCount > 0) {
+                // إذا كان هذا أول تحديث للصفحة أو زاد عدد الإشعارات
+                if (window.firstNotificationCheck || notificationCount > previousCount) {
+                    showNotificationAlert(notificationCount);
+                    window.firstNotificationCheck = false;
+                }
+            }
+
         } else if (response.status === 401) {
             handleSessionError(response);
             return;
