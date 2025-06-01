@@ -115,8 +115,7 @@
         }
     </style>
 </head>
-<body class="bg-light" data-user-role="{{ session.user_role }}">
-    <div class="container-fluid">
+<body>
     <!-- شريط علوي للإدارة -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-danger">
         <div class="container-fluid">
@@ -165,18 +164,8 @@
                 </div>
             </div>
 
-            <!-- المحتوى الرئيسي -->
+            <!-- المحتوى الإداري -->
             <div class="col-md-9">
-        <!-- إشعار للحساب التجريبي -->
-        {% if session.user_role == 'demo' %}
-        <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <i class="fas fa-eye"></i>
-            <strong>حساب تجريبي:</strong> هذا حساب للاطلاع على الخدمات فقط. لا يمكن تعديل البيانات أو تغيير كلمة المرور.
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endif %}
-
-        <!-- قسم الإشعارات والتحديثات -->
                 <!-- الإحصائيات -->
                 <div id="adminMain" class="admin-section active">
                     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -1519,7 +1508,7 @@
                     confirmMessage = 'هل أنت متأكد من رفض هذا الطلب؟';
                 }
 
-                if (!confirmMessage)) return;
+                if (!confirm(confirmMessage)) return;
 
                 showLoadingOverlay('جاري معالجة الطلب...');
 
@@ -1583,7 +1572,7 @@
             if (statsElement && adminPaymentRequests.length > 0) {
                 const pending = adminPaymentRequests.filter(r => r.status === 'pending').length;
                 const approved = adminPaymentRequests.filter(r => r.status === 'approved').length;
-                const rejected = adminPaymentRequests.length;
+                const rejected = adminPaymentRequests.filter(r => r.status === 'rejected').length;
 
                 statsElement.innerHTML = `
                     <small class="text-muted">
@@ -2752,7 +2741,7 @@
             modal.show();
         }
 
-
+        
 
         function saveCategory() {
             console.log('حفظ الفئة...');
