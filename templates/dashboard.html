@@ -38,14 +38,15 @@
                                     القائمة
                                 </button>
                                 <!-- زر الإشعارات -->
-                                <button class="btn btn-outline-light position-relative" onclick="showSection('notifications')">
+                                <button class="btn btn-outline-light position-relative d-flex align-items-center" onclick="showSection('notifications')" title="الإشعارات">
                                     <i class="fas fa-bell me-2"></i>
-                                    الإشعارات
+                                    <span class="d-none d-md-inline">الإشعارات</span>
                                     <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" 
-                                          id="notificationBadge" style="display: none;">
+                                          id="notificationBadge" style="display: none; font-size: 11px; min-width: 18px; height: 18px; line-height: 1.4;">
                                         0
                                     </span>
                                 </button>
+                                <!-- زر تسجيل الخروج --></old_str>
                                 <!-- زر تسجيل الخروج -->
                                 <a href="/logout" class="btn btn-outline-light">
                                     <i class="fas fa-sign-out-alt me-2"></i>
@@ -55,6 +56,22 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- إعلان النظام -->
+    <div class="row mb-3">
+        <div class="col-12">
+            <div class="alert alert-dismissible fade show" style="background: linear-gradient(135deg, #8B0000 0%, #DC143C 100%); color: white; border: none; border-radius: 15px; box-shadow: 0 4px 15px rgba(139,0,0,0.3);">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-bullhorn fa-lg me-3"></i>
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1 fw-bold">إعلان النظام</h6>
+                        <div id="announcementText" style="white-space: pre-line; font-size: 14px;">مرحباً بكم في نظام تسديد الفواتير</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert"></button>
             </div>
         </div>
     </div>
@@ -74,7 +91,7 @@
                             تاريخ المعاملات
                         </button>
                     </div>
-                </div>
+                </div></old_str>
                 <div class="card-body">
                     <div class="row g-3 justify-content-center">
                         <div class="col-lg-4 col-md-6 mb-3">
@@ -309,7 +326,7 @@
                 <a href="#" class="list-group-item list-group-item-action border-0" onclick="showSection('notifications'); closeSidebar();">
                     <i class="fas fa-bell me-3 text-warning"></i>
                     الإشعارات
-                    <span class="badge bg-danger rounded-pill float-end" id="sidebarNotificationBadge" style="display: none;">0</span>
+                    <span class="badge bg-danger rounded-pill float-end" id="sidebarNotificationBadge" style="display: none; font-size: 11px; min-width: 18px;">0</span>
                 </a>
             </div>
             
@@ -343,62 +360,89 @@
             </div>
             <div class="modal-body">
                 <form id="serviceRequestForm">
+                    <!-- رقم الهاتف والبحث -->
                     <div class="row">
-                        <div class="col-md-6 mb-3">
+                        <div class="col-12 mb-3">
                             <label for="servicePhoneNumber" class="form-label">رقم هاتف العميل <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-phone"></i>
-                                </span>
-                                <input type="tel" class="form-control" id="servicePhoneNumber" required>
-                                <button type="button" class="btn btn-outline-secondary" onclick="searchExistingCustomer()">
-                                    <i class="fas fa-search"></i>
-                                </button>
+                            <div class="row g-2">
+                                <div class="col-12 col-md-8">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="fas fa-phone"></i>
+                                        </span>
+                                        <input type="tel" class="form-control" id="servicePhoneNumber" required 
+                                               placeholder="أدخل رقم الهاتف" 
+                                               onkeypress="handlePhoneKeyPress(event)">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    <button type="button" class="btn btn-primary w-100" id="searchCustomerBtn" onclick="searchExistingCustomer()">
+                                        <i class="fas fa-search me-1"></i>
+                                        <span class="d-none d-sm-inline">بحث عن العميل</span>
+                                        <span class="d-sm-none">بحث</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-text text-muted small mt-2">
+                                <i class="fas fa-info-circle"></i> 
+                                يجب البحث عن الرقم أولاً لتفعيل باقي الحقول
+                            </div>
+                            <!-- رسالة حالة البحث -->
+                            <div id="searchStatus" class="mt-2" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- باقي الحقول (معطلة في البداية) -->
+                    <fieldset id="customerFieldsContainer" disabled>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="serviceCustomerName" class="form-label">اسم العميل <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="serviceCustomerName" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="serviceMobileNumber" class="form-label">رقم الجوال</label>
+                                <input type="tel" class="form-control" id="serviceMobileNumber" 
+                                       placeholder="رقم الجوال (اختياري)">
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="serviceCustomerName" class="form-label">اسم العميل <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="serviceCustomerName" required>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="serviceMobileNumber" class="form-label">رقم الجوال</label>
-                            <input type="tel" class="form-control" id="serviceMobileNumber">
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="serviceCompanySelect" class="form-label">الشركة <span class="text-danger">*</span></label>
-                            <select class="form-select" id="serviceCompanySelect" required onchange="updateServiceDetails()">
-                                <option value="">اختر الشركة</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="serviceAmount" class="form-label">المبلغ (ل.س) <span class="text-danger">*</span></label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="fas fa-money-bill"></i>
-                                </span>
-                                <input type="number" class="form-control" id="serviceAmount" min="0" step="1" required>
-                                <span class="input-group-text">ل.س</span>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="serviceCompanySelect" class="form-label">الشركة <span class="text-danger">*</span></label>
+                                <select class="form-select" id="serviceCompanySelect" required onchange="updateServiceDetails()">
+                                    <option value="">اختر الشركة</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="serviceAmount" class="form-label">المبلغ (ل.س) <span class="text-danger">*</span></label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-money-bill"></i>
+                                    </span>
+                                    <input type="number" class="form-control" id="serviceAmount" min="0" step="1" required>
+                                    <span class="input-group-text">ل.س</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <div class="form-label">رصيدك الحالي</div>
-                            <div class="alert alert-info mb-0">
-                                <i class="fas fa-wallet me-2"></i>
-                                <strong id="modalCurrentBalance">{{ session.user_balance }}</strong> ل.س
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-label">رصيدك الحالي</div>
+                                <div class="alert alert-info mb-0">
+                                    <i class="fas fa-wallet me-2"></i>
+                                    <strong id="modalCurrentBalance">{{ session.user_balance }}</strong> ل.س
+                                </div>
                             </div>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="serviceNotes" class="form-label">ملاحظات</label>
-                        <textarea class="form-control" id="serviceNotes" rows="3" placeholder="أي ملاحظات إضافية..."></textarea>
-                    </div>
+                        <div class="mb-3">
+                            <label for="serviceNotes" class="form-label">ملاحظات</label>
+                            <textarea class="form-control" id="serviceNotes" rows="3" 
+                                      placeholder="أي ملاحظات إضافية..."></textarea>
+                        </div>
+                    </fieldset>
+                    
                     <input type="hidden" id="serviceCategoryId">
                     <input type="hidden" id="serviceCompanyId">
                     <input type="hidden" id="serviceType">
+                    <input type="hidden" id="customerSearched" value="false">
                 </form>
             </div>
             <div class="modal-footer">
@@ -756,8 +800,23 @@ function updateLastLoginTime() {
     }
 }
 
-// تشغيل تحديث الوقت عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', updateLastLoginTime);
+// تحديث نص الإعلان
+function updateAnnouncementText() {
+    // تحديث نص الإعلان من إعدادات الموقع عند تحميل الصفحة
+    if (typeof loadSiteSettings === 'function') {
+        loadSiteSettings().then(() => {
+            // سيتم تحديث النص في دالة loadSiteSettings
+        }).catch(() => {
+            console.log('استخدام النص الافتراضي للإعلان');
+        });
+    }
+}
+
+// تشغيل تحديث الوقت والإعلان عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    updateLastLoginTime();
+    updateAnnouncementText();
+});</old_str>
 
 // دالة إظهار نافذة إعلان النظام
 function showAnnouncementModal() {
