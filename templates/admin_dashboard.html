@@ -1361,24 +1361,28 @@
                     <input type="hidden" id="balanceUserId">
                     <div class="mb-3">
                         <label class="form-label">المستخدم</label>
-                        <input type="text" class="form-control" id="balanceUserName">
+                        <input type="text" class="form-control" id="balanceUserName" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">الرصيد الحالي</label>
-                        <input type="text" class="form-control" id="currentBalance">
+                        <label class="form-label">الرصيد الحالي (ل.س)</label>
+                        <input type="text" class="form-control" id="currentBalance" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">المبلغ</label>
-                        <input type="text" class="form-control" id="balanceAmount">
+                        <label class="form-label">المبلغ المضاف (ل.س) *</label>
+                        <input type="number" class="form-control" id="balanceAmount" step="0.01" min="0" required placeholder="أدخل المبلغ المراد إضافته">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">ملاحظات</label>
-                        <textarea class="form-control" id="balanceNotes" rows="3"></textarea>
+                        <textarea class="form-control" id="balanceNotes" rows="3" placeholder="سبب إضافة الرصيد (اختياري)"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"></button>
-                    <button type="button" class="btn btn-primary" onclick="saveBalance()">حفظ</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="saveBalance()">
+                        <i class="fas fa-plus me-2"></i>إضافة رصيد
+                    </button>
                 </div>
             </div>
         </div>
@@ -1389,27 +1393,32 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">إرسال إشعار</h5>
+                    <h5 class="modal-title">إرسال إشعار للمستخدم</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="notificationUserId">
                     <div class="mb-3">
                         <label class="form-label">المستخدم</label>
-                        <input type="text" class="form-control" id="notificationUserName">
+                        <input type="text" class="form-control" id="notificationUserName" readonly>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">عنوان الإشعار</label>
-                        <input type="text" class="form-control" id="notificationTitle">
+                        <label class="form-label">عنوان الإشعار *</label>
+                        <input type="text" class="form-control" id="notificationTitle" required placeholder="أدخل عنوان الإشعار">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">نص الإشعار</label>
-                        <textarea class="form-control" id="notificationMessage" rows="3"></textarea>
+                        <label class="form-label">نص الإشعار *</label>
+                        <textarea class="form-control" id="notificationMessage" rows="4" required placeholder="أدخل محتوى الإشعار"></textarea>
+                        <div class="form-text">سيتم إرسال الإشعار عبر النظام وتيليجرام إذا كان المستخدم مسجلاً</div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"></button>
-                    <button type="button" class="btn btn-primary" onclick="saveNotification()">حفظ</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="saveNotification()">
+                        <i class="fas fa-paper-plane me-2"></i>إرسال الإشعار
+                    </button>
                 </div>
             </div>
         </div>
@@ -1761,7 +1770,7 @@
                 const safeName = user.name.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
                 html += `
-                    <tr>
+                    <tr data-user-id="${user.id}">
                         <td>
                             <span class="text-primary fw-bold user-name-clickable"
                                   onclick="editUser(${user.id}); event.stopPropagation();"
@@ -1771,13 +1780,23 @@
                                 ${user.name}
                             </span>
                         </td>
-                        <td>${user.phone}</td>
-                        <td>${user.balance} ل.س</td>
+                        <td>
+                            <span class="text-muted">
+                                <i class="fas fa-phone me-1"></i>
+                                ${user.phone}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-${user.balance >= 0 ? 'success' : 'danger'} bg-opacity-15 text-${user.balance >= 0 ? 'success' : 'danger'}">
+                                <i class="fas fa-coins me-1"></i>
+                                ${user.balance} ل.س
+                            </span>
+                        </td>
                         <td>${roleBadge}</td>
                         <td>${statusBadge}</td>
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="تعديل">
+                                <button class="btn btn-outline-primary" onclick="editUser(${user.id})" title="تعديل البيانات">
                                     <i class="fas fa-edit"></i>
                                 </button>
                                 <button class="btn btn-outline-success" onclick="manageUserBalance(${user.id}, '${safeName}', ${user.balance})" title="إدارة الرصيد">
@@ -1787,10 +1806,10 @@
                                     <i class="fas fa-bell"></i>
                                 </button>
                                 ${user.role !== 'admin' ? `
-                                    <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="حذف">
+                                    <button class="btn btn-outline-danger" onclick="deleteUser(${user.id})" title="حذف المستخدم">
                                         <i class="fas fa-trash"></i>
                                     </button>
-                                ` : ''}
+                                ` : '<span class="badge bg-warning text-dark small">محمي</span>'}
                             </div>
                         </td>
                     </tr>
@@ -2964,11 +2983,17 @@
 
         // حذف مستخدم
         async function deleteUser(userId) {
-            if (!confirm('هل أنت متأكد من حذف هذا المستخدم؟')) {
+            // الحصول على اسم المستخدم من الجدول
+            const userRow = document.querySelector(`tr[data-user-id="${userId}"]`);
+            const userName = userRow ? userRow.querySelector('.user-name-clickable').textContent.trim() : 'المستخدم';
+            
+            if (!confirm(`هل أنت متأكد من حذف المستخدم "${userName}"؟\n\nتحذير: هذا الإجراء لا يمكن التراجع عنه وسيؤدي إلى حذف جميع بيانات المستخدم!`)) {
                 return;
             }
 
             try {
+                showLoadingOverlay('جاري حذف المستخدم...');
+
                 const response = await fetch(`/api/users/${userId}`, {
                     method: 'DELETE'
                 });
@@ -2976,22 +3001,26 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    showMessage('تم حذف المستخدم بنجاح', 'success');
-                    loadUsers(); // إعادة تحميل قائمة المستخدمين
+                    showMessage(`تم حذف المستخدم "${userName}" بنجاح`, 'success');
+                    await loadUsers(); // إعادة تحميل قائمة المستخدمين
                 } else {
                     showMessage(result.error || 'خطأ في حذف المستخدم', 'error');
                 }
             } catch (error) {
                 console.error('خطأ في حذف المستخدم:', error);
                 showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
             }
         }
 
         function manageUserBalance(id, name, balance) {
-            // Populate the balance modal
+            // ملء نموذج إدارة الرصيد
             document.getElementById('balanceUserId').value = id;
             document.getElementById('balanceUserName').value = name;
-            document.getElementById('currentBalance').value = balance;
+            document.getElementById('currentBalance').value = `${balance} ل.س`;
+            document.getElementById('balanceAmount').value = '';
+            document.getElementById('balanceNotes').value = '';
 
             const modal = new bootstrap.Modal(document.getElementById('balanceModal'));
             modal.show();
@@ -3000,22 +3029,201 @@
         // حفظ بيانات المستخدم
         async function saveUser() {
             const userId = document.getElementById('userId').value;
-            const name = document.getElementById('userName').value;
-            const phone = document.getElementById('userPhone').value;
-            const password = document.getElementById('userPassword').value;
+            const name = document.getElementById('userName').value.trim();
+            const phone = document.getElementById('userPhone').value.trim();
+            const password = document.getElementById('userPassword').value.trim();
             const role = document.getElementById('userRole').value;
-            const balance = document.getElementById('userBalance').value;
-            const status = document.getElementById('userStatus').value;
+            const balance = parseFloat(document.getElementById('userBalance').value) || 0;
+            const status = parseInt(document.getElementById('userStatus').value);
 
-            // Send data to backend
+            // التحقق من صحة البيانات
+            if (!name) {
+                showMessage('اسم المستخدم مطلوب', 'error');
+                return;
+            }
+
+            if (!phone) {
+                showMessage('رقم الجوال مطلوب', 'error');
+                return;
+            }
+
+            if (!userId && !password) {
+                showMessage('كلمة المرور مطلوبة للمستخدم الجديد', 'error');
+                return;
+            }
+
+            if (password && password.length < 6) {
+                showMessage('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+                return;
+            }
+
+            if (balance < 0) {
+                showMessage('الرصيد لا يمكن أن يكون سالباً', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay(userId ? 'جاري تحديث بيانات المستخدم...' : 'جاري إضافة المستخدم...');
+
+                const userData = {
+                    name: name,
+                    phone: phone,
+                    role: role,
+                    balance: balance,
+                    is_active: status
+                };
+
+                // إضافة كلمة المرور فقط إذا تم إدخالها
+                if (password) {
+                    userData.password = password;
+                }
+
+                const url = userId ? `/api/users/${userId}` : '/api/users';
+                const method = userId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(userData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم حفظ بيانات المستخدم بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('userModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // إعادة تحميل قائمة المستخدمين
+                    await loadUsers();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ بيانات المستخدم', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ بيانات المستخدم:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
         }
 
         async function sendUserNotification(id, name) {
+            // ملء نموذج الإشعار
             document.getElementById('notificationUserId').value = id;
             document.getElementById('notificationUserName').value = name;
+            document.getElementById('notificationTitle').value = '';
+            document.getElementById('notificationMessage').value = '';
 
             const modal = new bootstrap.Modal(document.getElementById('notificationModal'));
             modal.show();
+        }
+
+        // حفظ الرصيد
+        async function saveBalance() {
+            const userId = document.getElementById('balanceUserId').value;
+            const amount = parseFloat(document.getElementById('balanceAmount').value);
+            const notes = document.getElementById('balanceNotes').value.trim();
+
+            if (!amount || amount <= 0) {
+                showMessage('يرجى إدخال مبلغ صحيح', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay('جاري تحديث الرصيد...');
+
+                const response = await fetch(`/api/users/${userId}/add-balance`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        amount: amount,
+                        notes: notes
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم تحديث الرصيد بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('balanceModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // إعادة تحميل قائمة المستخدمين
+                    await loadUsers();
+                } else {
+                    showMessage(result.error || 'خطأ في تحديث الرصيد', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في تحديث الرصيد:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // حفظ الإشعار
+        async function saveNotification() {
+            const userId = document.getElementById('notificationUserId').value;
+            const title = document.getElementById('notificationTitle').value.trim();
+            const message = document.getElementById('notificationMessage').value.trim();
+
+            if (!title || !message) {
+                showMessage('العنوان والرسالة مطلوبان', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay('جاري إرسال الإشعار...');
+
+                const response = await fetch(`/api/users/${userId}/send-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        title: title,
+                        message: message
+                    })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم إرسال الإشعار بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('notificationModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // مسح النموذج
+                    document.getElementById('notificationTitle').value = '';
+                    document.getElementById('notificationMessage').value = '';
+                } else {
+                    showMessage(result.error || 'خطأ في إرسال الإشعار', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في إرسال الإشعار:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
         }
 
         function saveCategory() {
