@@ -71,15 +71,6 @@ def check_session():
 # Dictionary to store Telegram chat IDs
 telegram_users = {}
 
-# التحقق من الحساب التجريبي
-def is_demo_account():
-    """التحقق من أن المستخدم الحالي هو حساب تجريبي"""
-    return session.get('user_role') == 'demo'
-
-def demo_account_error():
-    """رسالة خطأ للحساب التجريبي"""
-    return jsonify({'error': 'هذا حساب تجريبي للاطلاع فقط. لا يمكن تعديل البيانات أو تغيير كلمة المرور.'}), 403
-
 # إنشاء قاعدة البيانات
 def init_db():
     conn = sqlite3.connect('bills_system.db')
@@ -295,13 +286,6 @@ def init_db():
         INSERT OR IGNORE INTO users (name, phone, password, role, balance)
         VALUES (?, ?, ?, ?, ?)
     ''', ('المدير العام', '0000000000', hashed_password, 'admin', 0))
-
-    # إضافة حساب تجريبي للاطلاع على الخدمات
-    demo_password = hashlib.md5('demo123'.encode()).hexdigest()
-    cursor.execute('''
-        INSERT OR IGNORE INTO users (name, phone, password, role, balance)
-        VALUES (?, ?, ?, ?, ?)
-    ''', ('حساب تجريبي', '1111111111', demo_password, 'demo', 50000))
 
     # إضافة بعض المحافظات
     provinces = [
@@ -1220,10 +1204,6 @@ def send_user_notification(user_id):
 def add_user():
     if 'user_id' not in session or session['user_role'] != 'admin':
         return jsonify({'error': 'غير مصرح'}), 403
-    
-    # منع الحساب التجريبي من إضافة المستخدمين
-    if is_demo_account():
-        return demo_account_error()
 
     data = request.json
     name = data.get('name')
@@ -1254,10 +1234,6 @@ def add_user():
 def update_user(user_id):
     if 'user_id' not in session or session['user_role'] != 'admin':
         return jsonify({'error': 'غير مصرح'}), 403
-    
-    # منع الحساب التجريبي من تحديث المستخدمين
-    if is_demo_account():
-        return demo_account_error()
 
     data = request.json
     name = data.get('name')
@@ -1387,10 +1363,6 @@ def get_user(user_id):
 def delete_user(user_id):
     if 'user_id' not in session or session['user_role'] != 'admin':
         return jsonify({'error': 'غير مصرح'}), 403
-    
-    # منع الحساب التجريبي من حذف المستخدمين
-    if is_demo_account():
-        return demo_account_error()
 
     # منع حذف المستخدم الحالي
     if user_id == session['user_id']:
@@ -1920,10 +1892,6 @@ def reject_payment_request(request_id):
 def change_password():
     if 'user_id' not in session:
         return jsonify({'error': 'يجب تسجيل الدخول أولاً'}), 401
-
-    # منع الحساب التجريبي من تغيير كلمة المرور
-    if is_demo_account():
-        return demo_account_error()
 
     data = request.json
     current_password = data.get('current_password', '')
@@ -2455,10 +2423,6 @@ def get_admin_stats():
 def save_site_settings():
     if 'user_id' not in session or session['user_role'] != 'admin':
         return jsonify({'error': 'غير مصرح'}), 403
-    
-    # منع الحساب التجريبي من تعديل الإعدادات
-    if is_demo_account():
-        return demo_account_error()
 
     try:
         data = request.json
@@ -2593,10 +2557,6 @@ def get_site_settings():
 def create_backup():
     if 'user_id' not in session or session['user_role'] != 'admin':
         return jsonify({'error': 'غير مصرح'}), 403
-    
-    # منع الحساب التجريبي من إنشاء النسخ الاحتياطية
-    if is_demo_account():
-        return demo_account_error()
 
     import shutil
     import zipfile
