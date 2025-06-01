@@ -3,6 +3,7 @@
 {% block title %}لوحة التحكم - {{ session.user_name }}{% endblock %}
 
 {% block content %}
+<div style="display: none;" data-user-role="{{ session.user_role }}"></div>
 <!-- شريط علوي -->
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
@@ -373,8 +374,10 @@
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="changePasswordModalLabel">تغيير كلمة المرور</h5>
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="changePasswordModalLabel">
+                    <i class="fas fa-lock"></i> تغيير كلمة المرور
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
@@ -385,17 +388,26 @@
                     </div>
                     <div class="mb-3">
                         <label for="newPassword" class="form-label">كلمة المرور الجديدة</label>
-                        <input type="password" class="form-control" id="newPassword" required>
+                        <input type="password" class="form-control" id="newPassword" required minlength="6">
+                        <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
                     </div>
                     <div class="mb-3">
-                        <label for="confirmNewPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
-                        <input type="password" class="form-control" id="confirmNewPassword" required>
+                        <label for="confirmPassword" class="form-label">تأكيد كلمة المرور الجديدة</label>
+                        <input type="password" class="form-control" id="confirmPassword" required minlength="6">
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>تنبيه:</strong> عند تغيير كلمة المرور، سيتم إنهاء جميع جلساتك النشطة في الموقع وبوت التليجرام لضمان الأمان.
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="submitPasswordChange()">تغيير كلمة المرور</button>
+                <button type="button" class="btn btn-warning" onclick="changePassword()">
+                    <i class="fas fa-save"></i> تغيير كلمة المرور
+                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
             </div>
         </div>
     </div>
@@ -403,14 +415,17 @@
 
 <script>
     function showChangePasswordModal() {
-        $('#changePasswordModal').modal('show');
-    }
-
-    function submitPasswordChange() {
-        // هنا يمكنك إضافة كود للتحقق من كلمة المرور وإرسالها إلى الخادم
-        // بعد ذلك، يمكنك إظهار رسالة نجاح أو خطأ وإغلاق النافذة
-        console.log('تم تغيير كلمة المرور بنجاح!');
-        $('#changePasswordModal').modal('hide');
+        const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+        modal.show();
+        
+        // مسح النموذج
+        const form = document.getElementById('changePasswordForm');
+        if (form) form.reset();
+        
+        // التركيز على أول حقل
+        setTimeout(() => {
+            document.getElementById('currentPassword').focus();
+        }, 300);
     }
 </script>
 {% endblock %}
