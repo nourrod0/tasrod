@@ -1,4 +1,3 @@
-
 /* تنسيقات أساسية */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -260,64 +259,64 @@ body {
     .login-container {
         padding: 10px;
     }
-    
+
     .login-card {
         margin: 10px;
     }
-    
+
     .service-card {
         margin-bottom: 1rem;
         min-height: 120px;
     }
-    
+
     .navbar-brand {
         font-size: 1rem;
     }
-    
+
     .navbar-text {
         font-size: 0.8rem;
         display: block;
         margin: 2px 0;
     }
-    
+
     .card-header h5, .card-header h4 {
         font-size: 1.1rem;
     }
-    
+
     .btn {
         padding: 6px 12px;
         font-size: 12px;
         margin: 1px;
     }
-    
+
     .btn-sm {
         padding: 3px 8px;
         font-size: 11px;
     }
-    
+
     .table {
         font-size: 12px;
     }
-    
+
     .table thead th {
         padding: 8px 4px;
         font-size: 11px;
     }
-    
+
     .table tbody td {
         padding: 6px 4px;
         font-size: 11px;
     }
-    
+
     .modal-dialog {
         margin: 10px;
         max-width: calc(100% - 20px);
     }
-    
+
     .row {
         margin: 0;
     }
-    
+
     .col-md-3, .col-md-9 {
         padding: 5px;
     }
@@ -327,50 +326,50 @@ body {
     .container-fluid {
         padding: 5px;
     }
-    
+
     .navbar {
         padding: 0.5rem;
     }
-    
+
     .navbar-brand {
         font-size: 0.9rem;
     }
-    
+
     .navbar-text {
         font-size: 0.7rem;
     }
-    
+
     .card-header {
         padding: 0.75rem;
         font-size: 14px;
     }
-    
+
     .card-body {
         padding: 0.75rem;
     }
-    
+
     .btn-group {
         flex-wrap: wrap;
     }
-    
+
     .btn-group .btn {
         border-radius: 20px;
         margin: 2px;
     }
-    
+
     .table-responsive {
         font-size: 11px;
     }
-    
+
     .modal-body {
         padding: 1rem;
     }
-    
+
     .form-control {
         font-size: 13px;
         padding: 10px 15px;
     }
-    
+
     .alert {
         font-size: 12px;
         padding: 0.5rem;
@@ -881,39 +880,247 @@ body {
     }
 }
 
-/* تحسين الاستجابة للشاشات الصغيرة */
+/* أنماط الحقول المعطلة */
+fieldset[disabled] {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+fieldset[disabled] .form-control,
+fieldset[disabled] .form-select,
+fieldset[disabled] .btn {
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+    color: #6c757d;
+}
+
+/* أنماط رسائل البحث */
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#searchStatus .alert {
+    margin-bottom: 0;
+    border-radius: 6px;
+}
+
+/* تحسين زر البحث */
+#searchCustomerBtn {
+    min-width: 80px;
+}
+
+#searchCustomerBtn:disabled {
+    opacity: 0.6;
+}
+
+/* أنماط اختيار العملاء المتعددين */
+.customer-selection-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.customer-selection-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,123,255,0.2);
+    border-color: #007bff !important;
+}
+
+.customer-selection-card:hover .card-body {
+    background-color: rgba(0,123,255,0.05);
+}
+
+/* تحسين نموذج التسديد للشاشات الصغيرة */
 @media (max-width: 768px) {
-    .modal-dialog {
-        margin: 10px;
-        max-width: calc(100% - 20px);
+    #serviceRequestModal .modal-dialog {
+        margin: 0.5rem;
+        max-width: calc(100% - 1rem);
     }
     
-    .modal-body {
-        padding: 1.5rem;
-    }
-    
-    .modal-footer {
-        padding: 1rem 1.5rem;
-    }
-    
-    .card-body {
+    #serviceRequestModal .modal-body {
         padding: 1rem;
     }
     
+    #serviceRequestModal .input-group {
+        margin-bottom: 0.5rem;
+    }
+    
+    #serviceRequestModal .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    #searchCustomerBtn {
+        min-height: 42px;
+    }
+    
+    .customer-selection-card .d-flex {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    
+    .customer-selection-card .btn {
+        margin-top: 0.5rem;
+        align-self: stretch;
+    }
+}
+
+@media (max-width: 576px) {
+    #serviceRequestModal .modal-dialog {
+        margin: 0.25rem;
+        max-width: calc(100% - 0.5rem);
+    }
+    
+    #serviceRequestModal .form-control {
+        font-size: 16px; /* منع التكبير في iOS */
+    }
+    
+    #serviceRequestModal .btn {
+        font-size: 0.875rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-text {
+        font-size: 0.8rem;
+    }
+}
+
+/* أنماط نموذج إضافة العميل الجديد */
+#addNewCustomerModal .modal-content {
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+}
+
+#addNewCustomerModal .modal-header {
+    border-radius: 15px 15px 0 0;
+}
+
+#addNewCustomerModal .form-control:focus,
+#addNewCustomerModal .form-select:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.25);
+}
+
+/* تحسين عرض النتائج المتعددة */
+.alert .card {
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.alert .btn {
+    transition: all 0.3s ease;
+}
+
+.alert .btn:hover {
+    transform: translateY(-1px);
+}
+
+/* تحسين الأزرار */
+.btn-outline-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,123,255,0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40,167,69,0.3);
+}
+
+/* تحسين الاستجابة للشاشات الصغيرة */
+@media (max-width: 768px) {
+    .modal-dialog {
+        margin: 1rem;
+        max-width: calc(100% - 20px);
+    }
+
+    .modal-body {
+        padding: 1.5rem;
+    }
+
+    .modal-footer {
+        padding: 1rem 1.5rem;
+    }
+
+    .card-body {
+        padding: 1rem;
+    }
+
     .stats-card-modern:hover,
     .service-card-modern:hover,
     .inquiry-card:hover {
         transform: translateY(-3px) scale(1.01);
     }
-    
+
     .btn {
         padding: 8px 16px;
         font-size: 13px;
-    }
-    
+        }
+
     .container-fluid {
         padding-top: 15px;
         padding-bottom: 20px;
+    }
+/* أنماط الحقول المعطلة */
+fieldset[disabled] {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+fieldset[disabled] .form-control,
+fieldset[disabled] .form-select,
+fieldset[disabled] .btn {
+    background-color: #f8f9fa;
+    border-color: #e9ecef;
+    color: #6c757d;
+}
+
+/* أنماط رسائل البحث */
+.alert-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+#searchStatus .alert {
+    margin-bottom: 0;
+    border-radius: 6px;
+}
+
+/* تحسين زر البحث */
+#searchCustomerBtn {
+    min-width: 80px;
+}
+
+#searchCustomerBtn:disabled {
+    opacity: 0.6;
+}
+
+    .service-card-modern {
+        margin-bottom: 1rem;
+    }
+
+    .stats-card-modern {
+        margin-bottom: 1rem;
+    }
+
+    .customer-selection-card .d-flex {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .customer-selection-card .btn {
+        align-self: stretch;
+    }
+
+    /* تحسين النموذج على الشاشات الصغيرة */
+    .input-group {
+        flex-wrap: nowrap;
+    }
+
+    #searchCustomerBtn {
+        min-width: 70px;
+        font-size: 0.875rem;
     }
 }
 
@@ -994,7 +1201,7 @@ body {
     .d-md-none {
         display: none !important;
     }
-    
+
     .d-md-block {
         display: block !important;
     }

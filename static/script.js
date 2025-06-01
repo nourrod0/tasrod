@@ -202,8 +202,14 @@ async function updateNotificationStatus() {
                 const badge = document.getElementById(badgeId);
                 if (badge) {
                     if (notificationCount > 0) {
-                        badge.textContent = notificationCount;
-                        badge.style.display = 'inline';
+                        // عرض الأرقام بوضوح
+                        badge.textContent = notificationCount > 99 ? '99+' : notificationCount;
+                        badge.style.display = 'inline-block';
+                        badge.style.minWidth = '18px';
+                        badge.style.height = '18px';
+                        badge.style.fontSize = '11px';
+                        badge.style.lineHeight = '1.4';
+                        badge.style.textAlign = 'center';
                     } else {
                         badge.style.display = 'none';
                     }
@@ -2238,14 +2244,33 @@ async function searchCustomerInquiry() {
                     </div>
                 `;
                 
+                // إضافة زر إضافة بيانات جديدة لنفس الرقم (دائماً يظهر)
+                html += `
+                    <div class="text-center mb-3">
+                        <button class="btn btn-primary btn-sm" onclick="showAddNewCustomerForm('${phoneNumber}')">
+                            <i class="fas fa-plus"></i> إضافة بيانات جديدة لنفس الرقم
+                        </button>
+                    </div>
+                `;
+                
                 data.customers.forEach((customer, index) => {
                     html += `
-                        <div class="card mb-3 border-success">
-                            <div class="card-header bg-light">
-                                <h6 class="mb-0">
-                                    <i class="fas fa-user text-primary"></i>
-                                    ${customer.name || 'غير محدد'}
-                                </h6>
+                        <div class="card mb-3 border-success customer-inquiry-card" style="transition: all 0.3s ease;">
+                            <div class="card-header bg-gradient text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">
+                                        <i class="fas fa-user me-2"></i>
+                                        ${customer.name || 'غير محدد'}
+                                    </h6>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-building text-warning me-2"></i>
+                                        <span class="fw-bold text-warning">${customer.company_name || 'غير محدد'}</span>
+                                    </div>
+                                </div>
+                                <button class="btn btn-light btn-sm fw-bold" onclick="selectCustomerForInquiry(${index}, '${phoneNumber}')" 
+                                        style="min-width: 80px;">
+                                    <i class="fas fa-hand-pointer me-1"></i> اختيار
+                                </button>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -2294,6 +2319,10 @@ async function searchCustomerInquiry() {
                         </div>
                     `;
                 });
+                
+                // حفظ النتائج في متغير عام للاستخدام لاحقاً
+                window.currentSearchResults = data.customers;
+                window.currentSearchPhone = phoneNumber;
                 
                 resultDiv.innerHTML = html;
             } else {
@@ -2377,6 +2406,11 @@ function requestService(companyId, serviceType, serviceName) {
         // إعادة تعيين النموذج
         form.reset();
         
+        // إعادة تعيين حالة البحث
+        document.getElementById('customerSearched').value = 'false';
+        clearSearchStatus();
+        enableCustomerFields(false); // تعطيل الحقول في البداية
+        
         // تعيين القيم الافتراضية
         const categoryIdInput = document.getElementById('serviceCategoryId');
         const companyIdInput = document.getElementById('serviceCompanyId');
@@ -2402,6 +2436,7 @@ function requestService(companyId, serviceType, serviceName) {
             if (phoneInput) {
                 phoneInput.focus();
                 phoneInput.value = '';
+                phoneInput.placeholder = 'أدخل رقم الهاتف ثم اضغط البحث';
             }
         }, 500);
 
@@ -2413,40 +2448,483 @@ function requestService(companyId, serviceType, serviceName) {
     }
 }
 
+// التعامل مع الضغط على Enter في حقل الهاتف
+function handlePhoneKeyPress(event) {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        searchExistingCustomer();
+    }
+}
+
+// دالة تفعيل/تعطيل الحقول
+function enableCustomerFields(enable = true) {
+    const fieldsContainer = document.getElementById('customerFieldsContainer');
+    const submitBtn = document.querySelector('#serviceRequestModal .btn-primary[onclick*="submitServiceRequest"]');
+    
+    if (fieldsContainer) {
+        if (enable) {
+            fieldsContainer.removeAttribute('disabled');
+            fieldsContainer.style.opacity = '1';
+        } else {
+            fieldsContainer.setAttribute('disabled', 'disabled');
+            fieldsContainer.style.opacity = '0.6';
+        }
+    }
+    
+    if (submitBtn) {
+        submitBtn.disabled = !enable;
+    }
+}
+
+// دالة إظهار حالة البحث
+function showSearchStatus(message, type = 'info') {
+    const statusDiv = document.getElementById('searchStatus');
+    if (!statusDiv) return;
+    
+    let alertClass = 'alert-info';
+    let icon = 'fas fa-info-circle';
+    
+    switch(type) {
+        case 'success':
+            alertClass = 'alert-success';
+            icon = 'fas fa-check-circle';
+            break;
+        case 'warning':
+            alertClass = 'alert-warning';
+            icon = 'fas fa-exclamation-triangle';
+            break;
+        case 'error':
+            alertClass = 'alert-danger';
+            icon = 'fas fa-exclamation-circle';
+            break;
+        case 'loading':
+            alertClass = 'alert-primary';
+            icon = 'fas fa-spinner fa-spin';
+            break;
+    }
+    
+    statusDiv.innerHTML = `
+        <div class="alert ${alertClass} alert-sm mb-0">
+            <i class="${icon} me-2"></i>${message}
+        </div>
+    `;
+    statusDiv.style.display = 'block';
+}
+
+// دالة ملء بيانات العميل
+function fillCustomerData(customer) {
+    try {
+        console.log('ملء بيانات العميل:', customer);
+        
+        // تفعيل الحقول
+        enableCustomerFields(true);
+        document.getElementById('customerSearched').value = 'true';
+        
+        // ملء البيانات
+        const nameInput = document.getElementById('serviceCustomerName');
+        const mobileInput = document.getElementById('serviceMobileNumber');
+        const companySelect = document.getElementById('serviceCompanySelect');
+        const notesInput = document.getElementById('serviceNotes');
+        
+        if (nameInput) {
+            nameInput.value = customer.name || '';
+            nameInput.readOnly = true; // جعل الحقل للقراءة فقط
+        }
+        
+        if (mobileInput) {
+            mobileInput.value = customer.mobile_number || '';
+        }
+        
+        if (companySelect && customer.company_id) {
+            companySelect.value = customer.company_id;
+            // تحديث تفاصيل الخدمة
+            updateServiceDetails();
+        }
+        
+        if (notesInput && customer.notes) {
+            notesInput.value = customer.notes;
+        }
+        
+        // إضافة معلومات إضافية للعميل
+        const customerInfo = document.getElementById('customerInfo');
+        if (customerInfo) {
+            customerInfo.innerHTML = `
+                <div class="alert alert-info alert-sm">
+                    <strong>بيانات العميل الموجود:</strong><br>
+                    <small>
+                        الاسم: ${customer.name}<br>
+                        ${customer.mobile_number ? `الجوال: ${customer.mobile_number}<br>` : ''}
+                        ${customer.company_name ? `الشركة: ${customer.company_name}<br>` : ''}
+                        ${customer.speed ? `السرعة: ${customer.speed}<br>` : ''}
+                        ${customer.speed_price ? `السعر: ${customer.speed_price} ل.س` : ''}
+                    </small>
+                </div>
+            `;
+        }
+        
+        console.log('تم ملء بيانات العميل بنجاح');
+        
+    } catch (error) {
+        console.error('خطأ في ملء بيانات العميل:', error);
+        showSearchStatus('خطأ في ملء البيانات', 'error');
+    }
+}
+
+// دالة مسح حالة البحث
+function clearSearchStatus() {
+    const statusDiv = document.getElementById('searchStatus');
+    if (statusDiv) {
+        statusDiv.style.display = 'none';
+        statusDiv.innerHTML = '';
+    }
+}
+
+// دالة عرض العملاء المتعددين للاختيار
+function showMultipleCustomersSelection(customers, phoneNumber) {
+    try {
+        console.log(`عرض ${customers.length} عميل للاختيار`);
+        
+        const statusDiv = document.getElementById('searchStatus');
+        if (!statusDiv) return;
+        
+        let html = `
+            <div class="alert alert-success mb-3">
+                <i class="fas fa-users"></i> 
+                تم العثور على ${customers.length} عميل للرقم ${phoneNumber}
+                <br><small class="text-muted mt-1">اختر العميل المطلوب من القائمة التالية:</small>
+            </div>
+            <div class="row">
+        `;
+        
+        customers.forEach((customer, index) => {
+            html += `
+                <div class="col-md-6 mb-3">
+                    <div class="card border-primary h-100 customer-selection-card" style="cursor: pointer; transition: all 0.3s ease;" 
+                         onclick="selectCustomerFromList(${index}, '${phoneNumber}')"
+                         onmouseover="this.style.transform='scale(1.02)'; this.style.boxShadow='0 4px 15px rgba(0,123,255,0.3)';"
+                         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='';">
+                        <div class="card-header bg-gradient text-white p-3" style="background: linear-gradient(135deg, #007bff 0%, #6f42c1 100%);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fw-bold">
+                                        <i class="fas fa-user me-2"></i>
+                                        ${customer.name || 'غير محدد'}
+                                    </h6>
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-building text-warning me-2"></i>
+                                        <span class="fw-bold text-warning">${customer.company_name || 'غير محدد'}</span>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <i class="fas fa-chevron-right fa-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+                            <div class="row">
+                                <div class="col-12">
+                                    ${customer.mobile_number ? `
+                                        <div class="mb-2 d-flex align-items-center">
+                                            <i class="fas fa-mobile-alt text-success me-2"></i> 
+                                            <span class="small">${customer.mobile_number}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${customer.speed ? `
+                                        <div class="mb-2 d-flex align-items-center">
+                                            <i class="fas fa-tachometer-alt text-info me-2"></i> 
+                                            <span class="small">${customer.speed}</span>
+                                        </div>
+                                    ` : ''}
+                                    ${customer.speed_price ? `
+                                        <div class="mb-2 d-flex align-items-center">
+                                            <i class="fas fa-money-bill text-success me-2"></i> 
+                                            <span class="small fw-bold text-success">${customer.speed_price} ل.س</span>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                            <div class="text-center mt-3">
+                                <button class="btn btn-primary btn-sm w-100" 
+                                        onclick="event.stopPropagation(); selectCustomerFromList(${index}, '${phoneNumber}')">
+                                    <i class="fas fa-hand-pointer me-2"></i> اختيار هذا العميل
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += `
+            </div>
+            <div class="text-center mt-4">
+                <div class="alert alert-info d-inline-block">
+                    <i class="fas fa-info-circle me-2"></i>
+                    لم تجد العميل المطلوب؟
+                </div>
+                <br>
+                <button class="btn btn-success btn-lg" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')">
+                    <i class="fas fa-plus me-2"></i> إضافة عميل جديد بنفس الرقم
+                </button>
+            </div>
+        `;
+        
+        statusDiv.innerHTML = html;
+        statusDiv.style.display = 'block';
+        
+        // حفظ النتائج للاستخدام لاحقاً
+        window.currentSearchResults = customers;
+        window.currentSearchPhone = phoneNumber;
+        
+    } catch (error) {
+        console.error('خطأ في عرض العملاء المتعددين:', error);
+        showSearchStatus('خطأ في عرض النتائج', 'error');
+    }
+}
+
+// دالة اختيار عميل من القائمة
+function selectCustomerFromList(index, phoneNumber) {
+    try {
+        if (window.currentSearchResults && window.currentSearchResults[index]) {
+            const customer = window.currentSearchResults[index];
+            console.log('تم اختيار العميل:', customer);
+            
+            fillCustomerData(customer);
+            showSearchStatus(`تم اختيار العميل: ${customer.name}`, 'success');
+        } else {
+            showSearchStatus('خطأ في اختيار العميل', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في اختيار العميل:', error);
+        showSearchStatus('خطأ في اختيار العميل', 'error');
+    }
+}
+
+// دالة إظهار خيار إضافة عميل جديد
+function showAddNewCustomerOption(phoneNumber) {
+    try {
+        // تفعيل الحقول لإدخال بيانات جديدة
+        enableCustomerFields(true);
+        document.getElementById('customerSearched').value = 'true';
+        
+        // مسح الحقول
+        const nameInput = document.getElementById('serviceCustomerName');
+        const mobileInput = document.getElementById('serviceMobileNumber');
+        const companySelect = document.getElementById('serviceCompanySelect');
+        
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.readOnly = false;
+        }
+        if (mobileInput) mobileInput.value = '';
+        if (companySelect) companySelect.value = '';
+        
+        showSearchStatus('يرجى إدخال بيانات العميل الجديد', 'info');
+        
+        // التركيز على حقل الاسم
+        setTimeout(() => {
+            if (nameInput) nameInput.focus();
+        }, 100);
+        
+    } catch (error) {
+        console.error('خطأ في إظهار خيار العميل الجديد:', error);
+    }
+}
+
+// دالة إضافة عميل جديد في صفحة التسديد
+function showAddNewCustomerFormForPayment(phoneNumber) {
+    try {
+        // تفعيل الحقول لإدخال بيانات جديدة
+        enableCustomerFields(true);
+        document.getElementById('customerSearched').value = 'true';
+        
+        // مسح الحقول
+        const nameInput = document.getElementById('serviceCustomerName');
+        const mobileInput = document.getElementById('serviceMobileNumber');
+        const companySelect = document.getElementById('serviceCompanySelect');
+        
+        if (nameInput) {
+            nameInput.value = '';
+            nameInput.readOnly = false;
+        }
+        if (mobileInput) mobileInput.value = '';
+        if (companySelect) companySelect.value = '';
+        
+        showSearchStatus(`
+            <div class="alert alert-info">
+                <i class="fas fa-user-plus"></i> 
+                <strong>إضافة عميل جديد للرقم: ${phoneNumber}</strong><br>
+                <small>يرجى ملء البيانات التالية للعميل الجديد</small>
+            </div>
+        `, 'info');
+        
+        // التركيز على حقل الاسم
+        setTimeout(() => {
+            if (nameInput) nameInput.focus();
+        }, 100);
+        
+    } catch (error) {
+        console.error('خطأ في إظهار نموذج العميل الجديد:', error);
+    }
+}
+
 async function searchExistingCustomer() {
     const phoneNumber = document.getElementById('servicePhoneNumber')?.value.trim();
+    const searchBtn = document.getElementById('searchCustomerBtn');
     
     if (!phoneNumber) {
-        showMessage('يرجى إدخال رقم الهاتف أولاً', 'warning');
+        showSearchStatus('يرجى إدخال رقم الهاتف أولاً', 'warning');
+        document.getElementById('servicePhoneNumber')?.focus();
         return;
     }
     
+    // التحقق من صحة رقم الهاتف - مرونة أكثر في التحقق
+    if (phoneNumber.length < 10) {
+        showSearchStatus('رقم الهاتف يجب أن يكون 10 أرقام على الأقل', 'warning');
+        return;
+    }
+    
+    // التحقق من تنسيق رقم الهاتف مع مرونة أكثر
+    const phonePattern011 = /^011\d{7,8}$/;  // 011 + 7-8 أرقام
+    const phonePattern09 = /^09\d{7,8}$/;    // 09 + 7-8 أرقام
+    const phonePatternGeneral = /^0\d{9,10}$/; // أي رقم يبدأ بـ 0 ويحتوي على 10-11 رقم
+    
+    if (!phonePattern011.test(phoneNumber) && !phonePattern09.test(phoneNumber) && !phonePatternGeneral.test(phoneNumber)) {
+        console.log('تحذير: تنسيق رقم الهاتف قد يكون غير مألوف، لكن سيتم البحث عنه');
+        // لا نوقف البحث، فقط تحذير
+    }
+    
     try {
-        const response = await fetch(`/api/customers/search/${phoneNumber}`);
+        // تعطيل زر البحث أثناء البحث
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري البحث...';
+        }
+        
+        showSearchStatus('جاري البحث عن العميل...', 'loading');
+        
+        // إنشاء طلب مع timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+        console.log(`بحث عن رقم: ${phoneNumber}`);
+        
+        const response = await fetch(`/api/customers/search/${encodeURIComponent(phoneNumber)}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Cache-Control': 'no-cache'
+            },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+        console.log(`نتيجة البحث - حالة الاستجابة: ${response.status}`);
+        
         if (response.ok) {
             const data = await response.json();
+            console.log('بيانات البحث المستلمة:', data);
             
-            if (data.found) {
-                const customer = data.customer;
+            // التحقق من النتائج مع مرونة أكثر
+            if (data && ((data.found && data.customers && data.customers.length > 0) || (data.customer))) {
+                // إذا كان هناك customer واحد في البيانات
+                if (data.customer) {
+                    console.log('تم العثور على عميل واحد:', data.customer);
+                    fillCustomerData(data.customer);
+                    showSearchStatus(`
+                        <div class="alert alert-success mb-2">
+                            <i class="fas fa-check-circle"></i> 
+                            تم العثور على العميل: ${data.customer.name} - ${data.customer.company_name || 'غير محدد'}
+                        </div>
+                        <div class="text-center">
+                            <button class="btn btn-primary btn-sm" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')">
+                                <i class="fas fa-plus"></i> إضافة عميل جديد بنفس الرقم
+                            </button>
+                        </div>
+                    `, 'success');
+                }
+                // إذا كان هناك customers متعددة
+                else if (data.customers && data.customers.length > 0) {
+                    console.log(`تم العثور على ${data.customers.length} عميل`);
+                    if (data.customers.length === 1) {
+                        // عميل واحد فقط - ملء البيانات مباشرة مع إظهار زر إضافة جديد
+                        const customer = data.customers[0];
+                        fillCustomerData(customer);
+                        showSearchStatus(`
+                            <div class="alert alert-success mb-2">
+                                <i class="fas fa-check-circle"></i> 
+                                تم العثور على العميل: ${customer.name} - ${customer.company_name || 'غير محدد'}
+                            </div>
+                            <div class="text-center">
+                                <button class="btn btn-primary btn-sm" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')">
+                                    <i class="fas fa-plus"></i> إضافة عميل جديد بنفس الرقم
+                                </button>
+                            </div>
+                        `, 'success');
+                    } else {
+                        // عدة عملاء - عرض قائمة الاختيار
+                        showMultipleCustomersSelection(data.customers, phoneNumber);
+                    }
+                }
+            } else {
+                console.log('لم يتم العثور على أي عميل للرقم:', phoneNumber);
+                // لم يتم العثور على العميل - تفعيل الحقول لإدخال بيانات جديدة
+                enableCustomerFields(true);
+                document.getElementById('customerSearched').value = 'true';
                 
-                // ملء البيانات
+                // مسح الحقول
                 const nameInput = document.getElementById('serviceCustomerName');
                 const mobileInput = document.getElementById('serviceMobileNumber');
                 const companySelect = document.getElementById('serviceCompanySelect');
                 
-                if (nameInput) nameInput.value = customer.name;
-                if (mobileInput) mobileInput.value = customer.mobile_number || '';
-                if (companySelect && customer.company_id) companySelect.value = customer.company_id;
+                if (nameInput) nameInput.value = '';
+                if (mobileInput) mobileInput.value = '';
+                if (companySelect) companySelect.value = '';
                 
-                showMessage('تم العثور على بيانات العميل وملؤها تلقائياً', 'success');
-                updateServiceDetails();
-            } else {
-                showMessage('لم يتم العثور على بيانات لهذا الرقم', 'info');
+                showSearchStatus('لم يتم العثور على العميل. يرجى إدخال البيانات يدوياً', 'warning');
+                
+                // التركيز على حقل الاسم
+                setTimeout(() => {
+                    const nameField = document.getElementById('serviceCustomerName');
+                    if (nameField) nameField.focus();
+                }, 500);
             }
+        } else if (response.status === 401) {
+            showSearchStatus('انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى', 'error');
+        } else if (response.status === 404) {
+            // نفس المعاملة كما لو لم يتم العثور على العميل
+            enableCustomerFields(true);
+            document.getElementById('customerSearched').value = 'true';
+            
+            showSearchStatus('لم يتم العثور على العميل. يرجى إدخال البيانات يدوياً', 'warning');
+            
+            setTimeout(() => {
+                const nameField = document.getElementById('serviceCustomerName');
+                if (nameField) nameField.focus();
+            }, 500);
+        } else {
+            throw new Error(`خطأ في الخادم: ${response.status}`);
         }
     } catch (error) {
         console.error('خطأ في البحث عن العميل:', error);
-        showMessage('خطأ في البحث عن العميل', 'error');
+        
+        let errorMessage = 'حدث خطأ غير متوقع';
+        if (error.name === 'AbortError') {
+            errorMessage = 'انتهت مهلة البحث (10 ثوان)';
+        } else if (error.message.includes('Failed to fetch')) {
+            errorMessage = 'فشل في الاتصال بالخادم - تحقق من اتصال الإنترنت';
+        } else {
+            errorMessage = error.message;
+        }
+        
+        showSearchStatus(errorMessage, 'error');
+        
+    } finally {
+        // إعادة تفعيل زر البحث
+        if (searchBtn) {
+            searchBtn.disabled = false;
+            searchBtn.innerHTML = '<i class="fas fa-search"></i> بحث';
+        }
     }
 }
 
@@ -2464,6 +2942,14 @@ async function submitServiceRequest() {
     const form = document.getElementById('serviceRequestForm');
     if (!form) return;
     
+    // التحقق من أن البحث تم تنفيذه
+    const customerSearched = document.getElementById('customerSearched')?.value;
+    if (customerSearched !== 'true') {
+        showMessage('يجب البحث عن رقم الهاتف أولاً قبل إرسال الطلب', 'warning');
+        document.getElementById('servicePhoneNumber')?.focus();
+        return;
+    }
+    
     // جمع البيانات
     const phoneNumber = document.getElementById('servicePhoneNumber')?.value.trim();
     const customerName = document.getElementById('serviceCustomerName')?.value.trim();
@@ -2480,6 +2966,14 @@ async function submitServiceRequest() {
     
     if (!amount || amount <= 0) {
         showMessage('يرجى إدخال مبلغ صحيح', 'error');
+        document.getElementById('serviceAmount')?.focus();
+        return;
+    }
+    
+    // التحقق من الرصيد
+    const currentBalance = parseFloat(document.getElementById('modalCurrentBalance')?.textContent) || 0;
+    if (currentBalance < parseFloat(amount)) {
+        showMessage('الرصيد غير كافي لهذا المبلغ', 'error');
         return;
     }
     
@@ -2515,6 +3009,14 @@ async function submitServiceRequest() {
             
             // مسح النموذج
             form.reset();
+            document.getElementById('customerSearched').value = 'false';
+            clearSearchStatus();
+            enableCustomerFields(false);
+            
+            // تحديث الرصيد في الواجهة
+            const newBalance = currentBalance - parseFloat(amount);
+            document.getElementById('modalCurrentBalance').textContent = newBalance;
+            document.getElementById('currentBalance').textContent = newBalance;
             
             // تحديث الإحصائيات
             loadUserStats();
@@ -3436,6 +3938,359 @@ async function showCustomerDetailsAdmin(customerId) {
     }
 }
 
+// دالة لعرض اختيار العملاء المتعددين في نموذج التسديد
+function showMultipleCustomersSelection(customers, phoneNumber) {
+    let html = `
+        <div class="alert alert-info">
+            <i class="fas fa-users"></i> 
+            تم العثور على ${customers.length} عميل بنفس الرقم. اختر العميل المطلوب:
+        </div>
+    `;
+    
+    customers.forEach((customer, index) => {
+        html += `
+            <div class="card mb-2 border-primary customer-selection-card" style="cursor: pointer;" 
+                 onclick="selectCustomerForPayment(${index}, '${phoneNumber}')">
+                <div class="card-body p-2">
+                    <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center">
+                        <div class="flex-grow-1 mb-2 mb-md-0">
+                            <h6 class="mb-1">
+                                <i class="fas fa-user text-primary"></i>
+                                ${customer.name || 'غير محدد'}
+                            </h6>
+                            <small class="text-muted">
+                                <i class="fas fa-building"></i> ${customer.company_name || 'غير محدد'}
+                            </small>
+                            ${customer.mobile_number ? `
+                                <br><small class="text-info">
+                                    <i class="fas fa-mobile-alt"></i> ${customer.mobile_number}
+                                </small>
+                            ` : ''}
+                        </div>
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); selectCustomerForPayment(${index}, '${phoneNumber}')">
+                            <i class="fas fa-hand-pointer d-md-none"></i>
+                            <span class="d-none d-md-inline">اختيار</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    // إضافة زر إضافة عميل جديد
+    html += `
+        <div class="text-center mt-3">
+            <button class="btn btn-success btn-sm" onclick="showAddNewCustomerFormForPayment('${phoneNumber}')">
+                <i class="fas fa-plus"></i> إضافة عميل جديد بنفس الرقم
+            </button>
+        </div>
+    `;
+    
+    const statusDiv = document.getElementById('searchStatus');
+    if (statusDiv) {
+        statusDiv.innerHTML = html;
+        statusDiv.style.display = 'block';
+    }
+    
+    // حفظ النتائج للاستخدام لاحقاً
+    window.currentPaymentSearchResults = customers;
+    window.currentPaymentSearchPhone = phoneNumber;
+}
+
+// دالة لاختيار عميل معين للتسديد
+function selectCustomerForPayment(customerIndex, phoneNumber) {
+    if (!window.currentPaymentSearchResults || !window.currentPaymentSearchResults[customerIndex]) {
+        showSearchStatus('خطأ في تحديد العميل', 'error');
+        return;
+    }
+    
+    const customer = window.currentPaymentSearchResults[customerIndex];
+    fillCustomerData(customer);
+    showSearchStatus(`تم اختيار العميل: ${customer.name}`, 'success');
+}
+
+// دالة لاختيار عميل معين للاستعلام
+function selectCustomerForInquiry(customerIndex, phoneNumber) {
+    if (!window.currentSearchResults || !window.currentSearchResults[customerIndex]) {
+        return;
+    }
+    
+    const customer = window.currentSearchResults[customerIndex];
+    
+    // إظهار تفاصيل العميل المختار فقط
+    const resultDiv = document.getElementById('inquiryResult');
+    if (resultDiv) {
+        let html = `
+            <div class="alert alert-info">
+                <i class="fas fa-user-check"></i> 
+                تم اختيار العميل: ${customer.name}
+            </div>
+            <div class="card border-success">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user text-primary"></i>
+                        ${customer.name || 'غير محدد'}
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-building text-info"></i> الشركة:</strong>
+                                <span class="text-primary">${customer.company_name || 'غير محدد'}</span>
+                            </p>
+                            <p class="mb-2">
+                                <strong><i class="fas fa-phone text-success"></i> الهاتف:</strong>
+                                <span dir="ltr">${customer.phone_number || 'غير محدد'}</span>
+                            </p>
+                            ${customer.mobile_number ? `
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-mobile-alt text-warning"></i> الجوال:</strong>
+                                    <span dir="ltr">${customer.mobile_number}</span>
+                                </p>
+                            ` : ''}
+                        </div>
+                        <div class="col-md-6">
+                            ${customer.speed ? `
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-tachometer-alt text-info"></i> السرعة:</strong>
+                                    <span>${customer.speed}</span>
+                                </p>
+                            ` : ''}
+                            ${customer.speed_price ? `
+                                <p class="mb-2">
+                                    <strong><i class="fas fa-money-bill text-success"></i> السعر:</strong>
+                                    <span class="text-success fw-bold">${customer.speed_price} ل.س</span>
+                                </p>
+                            ` : ''}
+                            <p class="mb-2">
+                                <strong><i class="fas fa-calendar text-secondary"></i> تاريخ الإضافة:</strong>
+                                <small>${formatDate(customer.created_at)}</small>
+                            </p>
+                        </div>
+                    </div>
+                    ${customer.notes ? `
+                        <div class="mt-2 pt-2 border-top">
+                            <strong><i class="fas fa-sticky-note text-warning"></i> ملاحظات:</strong>
+                            <div class="text-muted">${customer.notes}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <button class="btn btn-secondary" onclick="searchCustomerInquiry()">
+                    <i class="fas fa-arrow-left"></i> العودة للنتائج الكاملة
+                </button>
+                <button class="btn btn-primary" onclick="showAddNewCustomerForm('${phoneNumber}')">
+                    <i class="fas fa-plus"></i> إضافة بيانات جديدة لنفس الرقم
+                </button>
+            </div>
+        `;
+        
+        resultDiv.innerHTML = html;
+    }
+}
+
+// دالة ملء بيانات العميل في نموذج التسديد
+function fillCustomerData(customer) {
+    const nameInput = document.getElementById('serviceCustomerName');
+    const mobileInput = document.getElementById('serviceMobileNumber');
+    const companySelect = document.getElementById('serviceCompanySelect');
+    
+    if (nameInput) nameInput.value = customer.name || '';
+    if (mobileInput) mobileInput.value = customer.mobile_number || '';
+    if (companySelect && customer.company_id) {
+        companySelect.value = customer.company_id;
+        updateServiceDetails();
+    }
+    
+    // تفعيل الحقول
+    enableCustomerFields(true);
+    document.getElementById('customerSearched').value = 'true';
+    
+    // التركيز على حقل المبلغ
+    setTimeout(() => {
+        const amountField = document.getElementById('serviceAmount');
+        if (amountField) amountField.focus();
+    }, 500);
+}
+
+// دالة إظهار نموذج إضافة عميل جديد للاستعلام
+function showAddNewCustomerForm(phoneNumber) {
+    // إنشاء نموذج إضافة عميل جديد
+    const modalHtml = `
+        <div class="modal fade" id="addNewCustomerModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header bg-success text-white">
+                        <h5 class="modal-title">
+                            <i class="fas fa-user-plus"></i>
+                            إضافة عميل جديد - ${phoneNumber}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="newCustomerForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="newCustomerName" class="form-label">اسم العميل <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="newCustomerName" required>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="newCustomerPhone" class="form-label">رقم الهاتف</label>
+                                    <input type="tel" class="form-control" id="newCustomerPhone" value="${phoneNumber}" readonly>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="newCustomerMobile" class="form-label">رقم الجوال</label>
+                                    <input type="tel" class="form-control" id="newCustomerMobile">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="newCustomerCompany" class="form-label">الشركة <span class="text-danger">*</span></label>
+                                    <select class="form-select" id="newCustomerCompany" required>
+                                        <option value="">اختر الشركة</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="newCustomerNotes" class="form-label">ملاحظات</label>
+                                <textarea class="form-control" id="newCustomerNotes" rows="3"></textarea>
+                            </div>
+                            <input type="hidden" id="newCustomerPhoneHidden" value="${phoneNumber}">
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> إلغاء
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="saveNewCustomer()">
+                            <i class="fas fa-save"></i> حفظ العميل
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // إزالة النموذج القديم إن وجد
+    const existingModal = document.getElementById('addNewCustomerModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // إضافة النموذج الجديد
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // ملء قائمة الشركات
+    populateNewCustomerCompanies();
+    
+    // إظهار النموذج
+    const modal = new bootstrap.Modal(document.getElementById('addNewCustomerModal'));
+    modal.show();
+    
+    // التركيز على حقل الاسم
+    setTimeout(() => {
+        document.getElementById('newCustomerName')?.focus();
+    }, 500);
+}
+
+// دالة إظهار نموذج إضافة عميل جديد للتسديد
+function showAddNewCustomerFormForPayment(phoneNumber) {
+    // إغلاق نموذج التسديد مؤقتاً وفتح نموذج الإضافة
+    showAddNewCustomerForm(phoneNumber);
+    
+    // إضافة معرف خاص للتسديد
+    window.isAddingForPayment = true;
+    window.paymentPhoneNumber = phoneNumber;
+}
+
+// دالة ملء قائمة الشركات في نموذج إضافة العميل
+function populateNewCustomerCompanies() {
+    const select = document.getElementById('newCustomerCompany');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">اختر الشركة</option>';
+    
+    if (companies && companies.length > 0) {
+        companies.forEach(company => {
+            const option = document.createElement('option');
+            option.value = company.id;
+            option.textContent = company.name;
+            select.appendChild(option);
+        });
+    }
+}
+
+// دالة حفظ العميل الجديد
+async function saveNewCustomer() {
+    const name = document.getElementById('newCustomerName')?.value.trim();
+    const phone = document.getElementById('newCustomerPhoneHidden')?.value;
+    const mobile = document.getElementById('newCustomerMobile')?.value.trim();
+    const companyId = document.getElementById('newCustomerCompany')?.value;
+    const notes = document.getElementById('newCustomerNotes')?.value.trim();
+    
+    if (!name || !phone || !companyId) {
+        showAlert('يرجى ملء جميع الحقول المطلوبة', 'error');
+        return;
+    }
+    
+    try {
+        showLoader('جاري حفظ العميل الجديد...');
+        
+        const response = await fetch('/api/customers', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                name: name,
+                phone_number: phone,
+                mobile_number: mobile,
+                company_id: parseInt(companyId),
+                notes: notes
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم حفظ العميل الجديد بنجاح', 'success');
+            
+            // إغلاق نموذج الإضافة
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addNewCustomerModal'));
+            if (modal) modal.hide();
+            
+            // إذا كان من نموذج التسديد، ملء البيانات
+            if (window.isAddingForPayment && window.paymentPhoneNumber) {
+                const newCustomer = {
+                    name: name,
+                    phone_number: phone,
+                    mobile_number: mobile,
+                    company_id: parseInt(companyId),
+                    notes: notes
+                };
+                fillCustomerData(newCustomer);
+                
+                // تنظيف المتغيرات
+                window.isAddingForPayment = false;
+                window.paymentPhoneNumber = null;
+            } else {
+                // إعادة البحث لإظهار النتائج المحدثة
+                searchCustomerInquiry();
+            }
+            
+        } else {
+            showAlert(result.error || 'حدث خطأ في حفظ العميل', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في حفظ العميل:', error);
+        showAlert('خطأ في الاتصال بالخادم', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
 // دوال إضافية لصفحة المستخدم
 function clearSearchFilters() {
     const searchInput = document.getElementById('paymentRequestsSearch');
@@ -3493,6 +4348,16 @@ if (typeof window !== 'undefined') {
     window.getStatusBadge = getStatusBadge;
     window.showLoadingOverlay = showLoadingOverlay;
     window.hideLoadingOverlay = hideLoadingOverlay;
+    
+    // دوال النتائج المتعددة والإضافة الجديدة
+    window.showMultipleCustomersSelection = showMultipleCustomersSelection;
+    window.selectCustomerForPayment = selectCustomerForPayment;
+    window.selectCustomerForInquiry = selectCustomerForInquiry;
+    window.fillCustomerData = fillCustomerData;
+    window.showAddNewCustomerForm = showAddNewCustomerForm;
+    window.showAddNewCustomerFormForPayment = showAddNewCustomerFormForPayment;
+    window.populateNewCustomerCompanies = populateNewCustomerCompanies;
+    window.saveNewCustomer = saveNewCustomer;
     
     // دوال التنقل
     window.showSection = showSection;
