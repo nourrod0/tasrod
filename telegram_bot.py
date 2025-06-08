@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # إعدادات البوت
-BOT_TOKEN = '7524705345:AAF_YNCj5Dv18uwBhF6PluPVcMjdIz9DYsw'
+BOT_TOKEN = '7656824513:AAH54ZAqzBP1CVdpVGKqmPF0M3NmmA3WzNU'
 DATABASE_PATH = 'bills_system.db'
 WEB_APP_URL = 'http://localhost:5000'
 
