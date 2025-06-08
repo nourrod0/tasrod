@@ -1035,7 +1035,7 @@ def send_telegram_notification(phone, message):
             chat_id = telegram_users[phone]
 
         if chat_id:
-            bot_token = '7656824513:AAH54ZAqzBP1CVdpVGKqmPF0M3NmmA3WzNU'
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '7815149975:AAH_jJLqghAyYnyEzO8WADhMfRD7UtLgsPE')
             send_message_url = f'https://api.telegram.org/bot{bot_token}/sendMessage'
 
             payload = {
@@ -3689,7 +3689,7 @@ def send_telegram_broadcast():
         full_message = f"🔔 {title}\n\n{message}"
         
         import requests
-        bot_token = '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE'  # يمكن جلبه من الإعدادات
+        bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE')
         
         for chat_id in chat_ids:
             try:
@@ -3799,13 +3799,13 @@ def test_telegram_connection():
         import requests
         import json
         
-        # جلب token البوت من الإعدادات
+        # جلب token البوت من الإعدادات أو Secrets
         try:
             with open('telegram_bot_settings.json', 'r', encoding='utf-8') as f:
                 settings = json.load(f)
-                bot_token = settings.get('bot_token', '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE')
+                bot_token = settings.get('bot_token', os.getenv('TELEGRAM_BOT_TOKEN', '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE'))
         except FileNotFoundError:
-            bot_token = '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE'
+            bot_token = os.getenv('TELEGRAM_BOT_TOKEN', '7815149975:AAEioobhaYQnSVE-7kYbcBu5vHH7_qW36QE')
         
         # اختبار الاتصال
         response = requests.get(f'https://api.telegram.org/bot{bot_token}/getMe', timeout=10)

@@ -22,7 +22,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # إعدادات البوت
-BOT_TOKEN = '7656824513:AAH54ZAqzBP1CVdpVGKqmPF0M3NmmA3WzNU'
+BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 DATABASE_PATH = 'bills_system.db'
 WEB_APP_URL = 'http://localhost:5000'
 
@@ -841,7 +841,7 @@ async def handle_customer_selection(update: Update, context: ContextTypes.DEFAUL
         if text == "❌ إلغاء":
             return await cancel_operation(update, context)
 
-        if text == "➕ إضافة بيانات جديدة":
+        if text == "➕ اضافة بيانات جديدة":
             # التأكد من وجود رقم الهاتف
             phone = user_data[user_id].get('customer_phone_for_add') or user_data[user_id].get('last_searched_phone')
             if phone:
@@ -2162,6 +2162,13 @@ def check_bot_health():
 def main():
     """تشغيل البوت مع نظام إعادة التشغيل التلقائي محسن"""
     global restart_bot
+
+    # التحقق من وجود التوكين
+    if not BOT_TOKEN:
+        print("❌ خطأ: لم يتم العثور على BOT_TOKEN في Secrets")
+        print("يرجى إضافة TELEGRAM_BOT_TOKEN في إعدادات Secrets")
+        logger.error("❌ BOT_TOKEN غير موجود في Secrets")
+        return
 
     while True:
         application = None
