@@ -1540,6 +1540,13 @@ def add_customer():
     if not all([phone_number, name]):
         return jsonify({'error': 'رقم الهاتف والاسم مطلوبان'}), 400
 
+    # التحقق من صحة معرف الشركة إذا تم تمريره
+    if company_id:
+        try:
+            company_id = int(company_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'معرف الشركة غير صحيح'}), 400
+
     with db_lock:
         conn = sqlite3.connect('bills_system.db')
         cursor = conn.cursor()
@@ -1563,6 +1570,13 @@ def update_customer(customer_id):
     mobile_number = data.get('mobile_number')
     company_id = data.get('company_id')
     notes = data.get('notes')
+
+    # التحقق من صحة معرف الشركة إذا تم تمريره
+    if company_id:
+        try:
+            company_id = int(company_id)
+        except (ValueError, TypeError):
+            return jsonify({'error': 'معرف الشركة غير صحيح'}), 400
 
     with db_lock:
         conn = sqlite3.connect('bills_system.db')
