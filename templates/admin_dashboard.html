@@ -1206,7 +1206,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">الفئة</label>
-                            <input type="text" class="form-control" id="companyCategory" required>
+                            <select class="form-control" id="companyCategorySelect" required>
+                                <option value="">اختر الفئة...</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">القسم الفرعي</label>
@@ -1258,7 +1260,9 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">الشركة</label>
-                            <input type="text" class="form-control" id="customerCompany">
+                            <select class="form-control" id="customerCompany">
+                                <option value="">اختر الشركة...</option>
+                            </select>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">ملاحظات</label>
@@ -2521,6 +2525,80 @@
             }
         }
 
+        // تحميل الفئات في القائمة المنسدلة
+        async function loadCategoriesIntoSelect() {
+            try {
+                const response = await fetch('/api/categories');
+                if (response.ok) {
+                    const categories = await response.json();
+                    const select = document.getElementById('companyCategorySelect');
+                    
+                    if (select) {
+                        // مسح الخيارات الموجودة (عدا الخيار الافتراضي)
+                        const defaultOption = select.querySelector('option[value=""]');
+                        select.innerHTML = '';
+                        if (defaultOption) {
+                            select.appendChild(defaultOption);
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.textContent = 'اختر الفئة...';
+                            select.appendChild(option);
+                        }
+                        
+                        // إضافة الفئات
+                        categories.filter(cat => cat.is_active).forEach(category => {
+                            const option = document.createElement('option');
+                            option.value = category.id;
+                            option.textContent = category.name;
+                            select.appendChild(option);
+                        });
+                    }
+                } else {
+                    console.error('خطأ في تحميل الفئات للقائمة المنسدلة');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الفئات:', error);
+            }
+        }
+
+        // تحميل الشركات في القائمة المنسدلة لنموذج الزبون
+        async function loadCompaniesIntoCustomerSelect() {
+            try {
+                const response = await fetch('/api/companies');
+                if (response.ok) {
+                    const companies = await response.json();
+                    const select = document.getElementById('customerCompany');
+                    
+                    if (select) {
+                        // مسح الخيارات الموجودة (عدا الخيار الافتراضي)
+                        const defaultOption = select.querySelector('option[value=""]');
+                        select.innerHTML = '';
+                        if (defaultOption) {
+                            select.appendChild(defaultOption);
+                        } else {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.textContent = 'اختر الشركة...';
+                            select.appendChild(option);
+                        }
+                        
+                        // إضافة الشركات النشطة فقط
+                        companies.filter(company => company.is_active).forEach(company => {
+                            const option = document.createElement('option');
+                            option.value = company.id; // استخدام معرف الشركة
+                            option.textContent = company.name;
+                            select.appendChild(option);
+                        });
+                    }
+                } else {
+                    console.error('خطأ في تحميل الشركات للقائمة المنسدلة');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الشركات:', error);
+            }
+        }
+
         // تحميل النسخ الاحتياطية
         async function loadBackups() {
             try {
@@ -2734,18 +2812,26 @@
             modal.show();
         }
 
-        function showAddCompanyModal() {
+        async function showAddCompanyModal() {
             document.getElementById('companyModalTitle').textContent = 'إضافة شركة جديدة';
             document.getElementById('companyForm').reset();
             document.getElementById('companyId').value = '';
+            
+            // تحميل الفئات في القائمة المنسدلة
+            await loadCategoriesIntoSelect();
+            
             const modal = new bootstrap.Modal(document.getElementById('companyModal'));
             modal.show();
         }
 
-        function showAddCustomerModal() {
+        async function showAddCustomerModal() {
             document.getElementById('customerModalTitle').textContent = 'إضافة زبون جديد';
             document.getElementById('customerForm').reset();
             document.getElementById('customerId').value = '';
+            
+            // تحميل الشركات في القائمة المنسدلة
+            await loadCompaniesIntoCustomerSelect();
+            
             const modal = new bootstrap.Modal(document.getElementById('customerModal'));
             modal.show();
         }
@@ -2757,9 +2843,13 @@
                 if (response.ok) {
                     const company = await response.json();
 
+                    // تحميل الفئات أولاً
+                    await loadCategoriesIntoSelect();
+
                     // ملء النموذج ببيانات الشركة
                     document.getElementById('companyId').value = company.id;
                     document.getElementById('companyName').value = company.name;
+                    document.getElementById('companyCategorySelect').value = company.category_id || '';
                     document.getElementById('companySubcategory').value = company.subcategory || '';
                     document.getElementById('companyCommission').value = company.commission || 0;
                     document.getElementById('companyStatus').value = company.is_active ? '1' : '0';
@@ -2811,11 +2901,15 @@
                 if (response.ok) {
                     const customer = await response.json();
 
+                    // تحميل الشركات أولاً
+                    await loadCompaniesIntoCustomerSelect();
+
                     // ملء النموذج ببيانات الزبون
                     document.getElementById('customerId').value = customer.id;
                     document.getElementById('customerPhone').value = customer.phone_number;
                     document.getElementById('customerName').value = customer.name;
                     document.getElementById('customerMobile').value = customer.mobile_number || '';
+                    document.getElementById('customerCompany').value = customer.company_id || ''; // استخدام معرف الشركة
                     document.getElementById('customerNotes').value = customer.notes || '';
 
                     // تغيير عنوان المودال
@@ -2861,29 +2955,397 @@
         // حفظ بيانات الشركة
         async function saveCompany() {
             const companyId = document.getElementById('companyId').value;
-            const name = document.getElementById('companyName').value;
-            const category = document.getElementById('companyCategory').value;
-            const subcategory = document.getElementById('companySubcategory').value;
-            const commission = document.getElementById('companyCommission').value;
-            const status = document.getElementById('companyStatus').value;
+            const name = document.getElementById('companyName').value.trim();
+            const categoryId = document.getElementById('companyCategorySelect').value;
+            const subcategory = document.getElementById('companySubcategory').value.trim();
+            const commission = parseFloat(document.getElementById('companyCommission').value) || 0;
+            const status = parseInt(document.getElementById('companyStatus').value);
 
-            // Send data to backend
+            // التحقق من صحة البيانات
+            if (!name) {
+                showMessage('اسم الشركة مطلوب', 'error');
+                return;
+            }
+
+            if (!categoryId) {
+                showMessage('الفئة مطلوبة', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay(companyId ? 'جاري تحديث الشركة...' : 'جاري إضافة الشركة...');
+
+                const companyData = {
+                    name: name,
+                    category_id: categoryId,
+                    subcategory: subcategory,
+                    commission: commission,
+                    is_active: status
+                };
+
+                const url = companyId ? `/api/companies/${companyId}` : '/api/companies';
+                const method = companyId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(companyData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم حفظ الشركة بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('companyModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // إعادة تحميل الشركات
+                    await loadCompaniesAdmin();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الشركة', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ الشركة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
         }
 
         // حفظ بيانات الزبون
         async function saveCustomer() {
             const customerId = document.getElementById('customerId').value;
-            const phone = document.getElementById('customerPhone').value;
-            const name = document.getElementById('customerName').value;
-            const mobile = document.getElementById('customerMobile').value;
-            const company = document.getElementById('customerCompany').value;
-            const notes = document.getElementById('customerNotes').value;
+            const phone = document.getElementById('customerPhone').value.trim();
+            const name = document.getElementById('customerName').value.trim();
+            const mobile = document.getElementById('customerMobile').value.trim();
+            const companySelect = document.getElementById('customerCompany');
+            const companyId = companySelect.value;
+            const notes = document.getElementById('customerNotes').value.trim();
 
-            // Send data to backend
+            // التحقق من صحة البيانات
+            if (!phone) {
+                showMessage('رقم الهاتف مطلوب', 'error');
+                return;
+            }
+
+            if (!name) {
+                showMessage('اسم الزبون مطلوب', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay(customerId ? 'جاري تحديث الزبون...' : 'جاري إضافة الزبون...');
+
+                const customerData = {
+                    phone_number: phone,
+                    name: name,
+                    mobile_number: mobile,
+                    company_id: companyId, // إرسال معرف الشركة بدلاً من الاسم
+                    notes: notes
+                };
+
+                const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
+                const method = customerId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(customerData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم حفظ الزبون بنجاح', 'success');
+                    
+                    // إغلاق المودال
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // إعادة تحميل قائمة الزبائن
+                    await loadCustomers();
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الزبون', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ الزبون:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
         }
 
-        function showCategoriesModal() {
-            console.log('إدارة الفئات...');
+        // إظهار مودال إدارة الفئات
+        async function showCategoriesModal() {
+            try {
+                showLoadingOverlay('جاري تحميل الفئات...');
+                
+                // تحميل الفئات
+                const response = await fetch('/api/categories');
+                if (response.ok) {
+                    const categories = await response.json();
+                    displayCategories(categories);
+                    
+                    // إظهار المودال
+                    const modal = new bootstrap.Modal(document.getElementById('categoriesModal'));
+                    modal.show();
+                } else {
+                    throw new Error(`خطأ في الخادم: ${response.status}`);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الفئات:', error);
+                showMessage('خطأ في تحميل الفئات', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // عرض الفئات في الجدول
+        function displayCategories(categories) {
+            const tableBody = document.getElementById('categoriesTableBody');
+            if (!tableBody) return;
+
+            if (!categories || categories.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="text-center">لا توجد فئات</td></tr>';
+                return;
+            }
+
+            let html = '';
+            categories.forEach(category => {
+                const statusBadge = category.is_active ?
+                    '<span class="badge bg-success">نشط</span>' :
+                    '<span class="badge bg-danger">معطل</span>';
+
+                html += `
+                    <tr>
+                        <td>
+                            <i class="${category.icon || 'fas fa-tag'} me-2"></i>
+                            ${category.name}
+                        </td>
+                        <td>
+                            <i class="${category.icon || 'fas fa-tag'}"></i>
+                        </td>
+                        <td>${statusBadge}</td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="editCategory(${category.id})" title="تعديل">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="deleteCategory(${category.id})" title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableBody.innerHTML = html;
+        }
+
+        // إظهار مودال إضافة فئة جديدة
+        function showAddCategoryModal() {
+            // إعادة تعيين النموذج
+            document.getElementById('categoryForm').reset();
+            document.getElementById('categoryId').value = '';
+            
+            // تعيين القيم الافتراضية
+            document.getElementById('categoryIcon').value = 'fas fa-building';
+            document.getElementById('categoryStatus').value = '1';
+            
+            // تغيير عنوان المودال
+            document.getElementById('categoryModalTitle').textContent = 'إضافة فئة جديدة';
+            
+            // إغلاق مودال الفئات أولاً
+            const categoriesModal = bootstrap.Modal.getInstance(document.getElementById('categoriesModal'));
+            if (categoriesModal) {
+                categoriesModal.hide();
+            }
+            
+            // إظهار مودال إضافة الفئة بعد إغلاق المودال السابق
+            setTimeout(() => {
+                const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+                modal.show();
+            }, 300);
+        }
+
+        // تعديل فئة موجودة
+        async function editCategory(categoryId) {
+            try {
+                showLoadingOverlay('جاري تحميل بيانات الفئة...');
+                
+                const response = await fetch(`/api/categories/${categoryId}`);
+                if (response.ok) {
+                    const category = await response.json();
+                    
+                    // ملء النموذج ببيانات الفئة
+                    document.getElementById('categoryId').value = category.id;
+                    document.getElementById('categoryName').value = category.name;
+                    document.getElementById('categoryIcon').value = category.icon || 'fas fa-building';
+                    document.getElementById('categoryStatus').value = category.is_active ? '1' : '0';
+                    
+                    // تغيير عنوان المودال
+                    document.getElementById('categoryModalTitle').textContent = 'تعديل الفئة';
+                    
+                    // إغلاق مودال الفئات أولاً
+                    const categoriesModal = bootstrap.Modal.getInstance(document.getElementById('categoriesModal'));
+                    if (categoriesModal) {
+                        categoriesModal.hide();
+                    }
+                    
+                    // إظهار مودال التعديل بعد إغلاق المودال السابق
+                    setTimeout(() => {
+                        const modal = new bootstrap.Modal(document.getElementById('categoryModal'));
+                        modal.show();
+                    }, 300);
+                    
+                } else {
+                    showMessage('خطأ في تحميل بيانات الفئة', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الفئة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // حذف فئة
+        async function deleteCategory(categoryId) {
+            if (!confirm('هل أنت متأكد من حذف هذه الفئة؟\n\nتحذير: قد يؤثر هذا على الشركات المرتبطة بهذه الفئة')) {
+                return;
+            }
+
+            try {
+                showLoadingOverlay('جاري حذف الفئة...');
+                
+                const response = await fetch(`/api/categories/${categoryId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage('تم حذف الفئة بنجاح', 'success');
+                    
+                    // إعادة تحميل الفئات في المودال
+                    const categoriesModal = bootstrap.Modal.getInstance(document.getElementById('categoriesModal'));
+                    if (categoriesModal) {
+                        const categoriesResponse = await fetch('/api/categories');
+                        if (categoriesResponse.ok) {
+                            const categories = await categoriesResponse.json();
+                            displayCategories(categories);
+                        }
+                    }
+                    
+                    // إعادة تحميل الشركات إذا كان القسم نشط
+                    const companiesSection = document.getElementById('companies');
+                    if (companiesSection && companiesSection.classList.contains('active')) {
+                        await loadCompaniesAdmin();
+                    }
+                } else {
+                    showMessage(result.error || 'خطأ في حذف الفئة', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حذف الفئة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
+        }
+
+        // حفظ بيانات الفئة (إضافة أو تعديل)
+        async function saveCategory() {
+            const categoryId = document.getElementById('categoryId').value;
+            const name = document.getElementById('categoryName').value.trim();
+            const icon = document.getElementById('categoryIcon').value.trim();
+            const status = parseInt(document.getElementById('categoryStatus').value);
+
+            // التحقق من صحة البيانات
+            if (!name) {
+                showMessage('اسم الفئة مطلوب', 'error');
+                return;
+            }
+
+            if (!icon) {
+                showMessage('أيقونة الفئة مطلوبة', 'error');
+                return;
+            }
+
+            try {
+                showLoadingOverlay(categoryId ? 'جاري تحديث الفئة...' : 'جاري إضافة الفئة...');
+
+                const categoryData = {
+                    name: name,
+                    icon: icon,
+                    is_active: status
+                };
+
+                const url = categoryId ? `/api/categories/${categoryId}` : '/api/categories';
+                const method = categoryId ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(categoryData)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    showMessage(result.message || 'تم حفظ الفئة بنجاح', 'success');
+                    
+                    // إغلاق مودال التعديل/الإضافة
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('categoryModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // إعادة فتح مودال الفئات وتحديث البيانات
+                    setTimeout(async () => {
+                        try {
+                            const categoriesResponse = await fetch('/api/categories');
+                            if (categoriesResponse.ok) {
+                                const categories = await categoriesResponse.json();
+                                displayCategories(categories);
+                                
+                                const categoriesModal = new bootstrap.Modal(document.getElementById('categoriesModal'));
+                                categoriesModal.show();
+                            }
+                        } catch (error) {
+                            console.error('خطأ في إعادة تحميل الفئات:', error);
+                        }
+                    }, 300);
+                    
+                    // إعادة تحميل الشركات إذا كان القسم نشط
+                    const companiesSection = document.getElementById('companies');
+                    if (companiesSection && companiesSection.classList.contains('active')) {
+                        await loadCompaniesAdmin();
+                    }
+                } else {
+                    showMessage(result.error || 'خطأ في حفظ الفئة', 'error');
+                }
+
+            } catch (error) {
+                console.error('خطأ في حفظ الفئة:', error);
+                showMessage('خطأ في الاتصال بالخادم', 'error');
+            } finally {
+                hideLoadingOverlay();
+            }
         }
 
         // تعديل مستخدم - محسن مع معلومات إضافية
@@ -3226,9 +3688,7 @@
             }
         }
 
-        function saveCategory() {
-            console.log('حفظ الفئة...');
-        }
+        
 
         // التأكد من توفر جميع الدوال عالمياً
         window.showAdminSection = showAdminSection;
