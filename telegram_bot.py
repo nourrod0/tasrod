@@ -841,7 +841,7 @@ async def handle_customer_selection(update: Update, context: ContextTypes.DEFAUL
         if text == "❌ إلغاء":
             return await cancel_operation(update, context)
 
-        if text == "➕ اضافة بيانات جديدة":
+        if text == "➕ إضافة بيانات جديدة":
             # التأكد من وجود رقم الهاتف
             phone = user_data[user_id].get('customer_phone_for_add') or user_data[user_id].get('last_searched_phone')
             if phone:
