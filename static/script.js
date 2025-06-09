@@ -1719,7 +1719,7 @@ function showSection(sectionId) {
         console.log(`إظهار القسم: ${sectionId}`);
 
         // التحقق من صحة معرف القسم
-        const validSections = ['mainServices', 'notifications', 'transactions', 'changePassword'];
+        const validSections = ['mainServices', 'notifications', 'transactions', 'customers', 'changePassword'];
         if (!validSections.includes(sectionId)) {
             throw new Error(`معرف القسم غير صحيح: ${sectionId}`);
         }
@@ -1781,6 +1781,15 @@ function showSection(sectionId) {
                         break;
                     case 'transactions':
                         await retryWithDelay(() => loadUserTransactions(), 2000, 2);
+                        break;
+                    case 'customers':
+                        await retryWithDelay(() => loadUserCustomers(), 2000, 2);
+                        // تحميل الشركات للفلتر
+                        if (typeof loadCompanies === 'function') {
+                            loadCompanies().then(() => {
+                                populateCustomerCompanyFilter();
+                            });
+                        }
                         break;
                     case 'changePassword':
                         // تنظيف نموذج تغيير كلمة المرور
@@ -2342,6 +2351,517 @@ function showLoader(message = 'جاري التحميل...') {
     `;
 
     document.body.appendChild(loaderDiv);
+}
+
+// متغيرات إدارة الزبائن
+let userCustomers = [];
+let currentCustomersPage = 1;
+let customersPerPage = 10;
+let isLoadingCustomers = false;
+
+// تحميل زبائن المستخدم
+async function loadUserCustomers() {
+    if (isLoadingCustomers) return;
+    
+    try {
+        isLoadingCustomers = true;
+        showLoader('جاري تحميل الزبائن...');
+        
+        const searchTerm = document.getElementById('customerSearch')?.value?.trim() || '';
+        const companyFilter = document.getElementById('customerCompanyFilter')?.value || '';
+        
+        const params = new URLSearchParams({
+            page: currentCustomersPage,
+            per_page: customersPerPage,
+            user_only: 'true'
+        });
+        
+        if (searchTerm) params.append('search', searchTerm);
+        if (companyFilter) params.append('company_id', companyFilter);
+        
+        const response = await fetch(`/api/user/customers?${params}`);
+        
+        if (response.ok) {
+            const data = await response.json();
+            userCustomers = data.customers || [];
+            displayUserCustomers(data);
+            updateCustomersPagination(data);
+        } else {
+            throw new Error('فشل في تحميل الزبائن');
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل الزبائن:', error);
+        showAlert('فشل في تحميل الزبائن: ' + error.message, 'error');
+        
+        const tableBody = document.getElementById('userCustomersTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center p-4">
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            خطأ في تحميل الزبائن
+                            <br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadUserCustomers()">
+                                <i class="fas fa-redo me-1"></i> إعادة المحاولة
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    } finally {
+        isLoadingCustomers = false;
+        hideLoader();
+    }
+}
+
+// عرض زبائن المستخدم
+function displayUserCustomers(data) {
+    const tbody = document.getElementById('userCustomersTableBody');
+    if (!tbody) return;
+    
+    if (!data.customers || data.customers.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center p-5">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted mb-2">لا توجد زبائن</h6>
+                        <small class="text-muted">ابدأ بإضافة زبون جديد</small>
+                        <button class="btn btn-primary btn-sm mt-3" onclick="showAddCustomerModal()">
+                            <i class="fas fa-plus me-1"></i> إضافة زبون
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    let html = '';
+    data.customers.forEach((customer, index) => {
+        html += `
+            <tr class="customer-row" data-customer-id="${customer.id}">
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 40px; height: 40px;">
+                                <i class="fas fa-user text-primary"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="fw-bold">${escapeHtml(customer.name)}</div>
+                            <small class="text-muted">زبون #${customer.id}</small>
+                        </div>
+                    </div>
+                </td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-phone text-success me-2"></i>
+                        <span>${escapeHtml(customer.phone_number)}</span>
+                    </div>
+                </td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-mobile-alt text-info me-2"></i>
+                        <span>${escapeHtml(customer.mobile_number || 'غير محدد')}</span>
+                    </div>
+                </td>
+                <td class="align-middle">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-building text-warning me-2"></i>
+                        <span>${escapeHtml(customer.company_name || 'غير محدد')}</span>
+                    </div>
+                </td>
+                <td class="align-middle">
+                    <small class="text-muted">${formatDate(customer.created_at)}</small>
+                </td>
+                <td class="text-center align-middle">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-info" 
+                                onclick="viewCustomerDetails(${customer.id})"
+                                title="عرض التفاصيل">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="btn btn-outline-primary" 
+                                onclick="editCustomer(${customer.id})"
+                                title="تعديل">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-outline-success" 
+                                onclick="createPaymentFromCustomer(${customer.id})"
+                                title="إنشاء طلب تسديد">
+                            <i class="fas fa-credit-card"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+}
+
+// تحديث التنقل بين صفحات الزبائن
+function updateCustomersPagination(data) {
+    const paginationInfo = document.getElementById('customersPaginationInfo');
+    const pagination = document.getElementById('customersPagination');
+    
+    if (paginationInfo && data.total) {
+        const start = Math.min((data.page - 1) * data.per_page + 1, data.total);
+        const end = Math.min(data.page * data.per_page, data.total);
+        paginationInfo.textContent = `عرض ${start}-${end} من ${data.total} زبون`;
+    }
+    
+    if (!pagination || data.total_pages <= 1) {
+        if (pagination) pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHtml = '';
+    const currentPage = parseInt(data.page) || 1;
+    const totalPages = parseInt(data.total_pages) || 1;
+    
+    // زر السابق
+    if (currentPage > 1) {
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeCustomersPage(${currentPage - 1})">
+                    <i class="fas fa-chevron-right me-1"></i>السابق
+                </button>
+            </li>
+        `;
+    }
+    
+    // أرقام الصفحات
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === currentPage) {
+            paginationHtml += `
+                <li class="page-item active">
+                    <span class="page-link">${i}</span>
+                </li>
+            `;
+        } else {
+            paginationHtml += `
+                <li class="page-item">
+                    <button type="button" class="page-link" onclick="changeCustomersPage(${i})">${i}</button>
+                </li>
+            `;
+        }
+    }
+    
+    // زر التالي
+    if (currentPage < totalPages) {
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeCustomersPage(${currentPage + 1})">
+                    التالي<i class="fas fa-chevron-left ms-1"></i>
+                </button>
+            </li>
+        `;
+    }
+    
+    pagination.innerHTML = paginationHtml;
+}
+
+// تغيير صفحة الزبائن
+function changeCustomersPage(page) {
+    if (isLoadingCustomers) return;
+    
+    const pageNumber = parseInt(page);
+    if (isNaN(pageNumber) || pageNumber < 1) return;
+    
+    currentCustomersPage = pageNumber;
+    loadUserCustomers();
+}
+
+// إظهار نموذج إضافة زبون
+function showAddCustomerModal() {
+    const modal = document.getElementById('customerModal');
+    const form = document.getElementById('customerForm');
+    const title = document.getElementById('customerModalTitle');
+    
+    if (!modal || !form || !title) return;
+    
+    // مسح النموذج
+    form.reset();
+    document.getElementById('customerId').value = '';
+    title.textContent = 'إضافة زبون جديد';
+    
+    // تحميل قائمة الشركات
+    populateCustomerCompanies();
+    
+    const bootstrapModal = new bootstrap.Modal(modal);
+    bootstrapModal.show();
+}
+
+// تحميل الشركات في نموذج الزبون
+async function populateCustomerCompanies() {
+    try {
+        const response = await fetch('/api/companies');
+        if (response.ok) {
+            const companies = await response.json();
+            const select = document.getElementById('customerCompanySelect');
+            if (select) {
+                select.innerHTML = '<option value="">اختر الشركة (اختياري)</option>';
+                companies.forEach(company => {
+                    if (company.is_active) {
+                        select.innerHTML += `<option value="${company.id}">${company.name}</option>`;
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل الشركات:', error);
+    }
+}
+
+// حفظ الزبون (إضافة أو تعديل)
+async function saveCustomer() {
+    const form = document.getElementById('customerForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const customerId = document.getElementById('customerId').value;
+    const customerData = {
+        name: document.getElementById('customerName').value.trim(),
+        phone_number: document.getElementById('customerPhone').value.trim(),
+        mobile_number: document.getElementById('customerMobile').value.trim(),
+        company_id: document.getElementById('customerCompanySelect').value || null,
+        notes: document.getElementById('customerNotes').value.trim()
+    };
+    
+    try {
+        showLoader(customerId ? 'جاري تحديث الزبون...' : 'جاري إضافة الزبون...');
+        
+        const url = customerId ? `/api/customers/${customerId}` : '/api/customers';
+        const method = customerId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(customerData)
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert(result.message, 'success');
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('customerModal'));
+            if (modal) modal.hide();
+            
+            // إعادة تحميل الزبائن
+            loadUserCustomers();
+        } else {
+            showAlert(result.error || 'فشل في حفظ الزبون', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في حفظ الزبون:', error);
+        showAlert('خطأ في حفظ الزبون', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// تعديل زبون
+async function editCustomer(customerId) {
+    try {
+        showLoader('جاري تحميل بيانات الزبون...');
+        
+        const response = await fetch(`/api/customers/${customerId}`);
+        if (response.ok) {
+            const customer = await response.json();
+            
+            // ملء النموذج ببيانات الزبون
+            document.getElementById('customerId').value = customer.id;
+            document.getElementById('customerName').value = customer.name;
+            document.getElementById('customerPhone').value = customer.phone_number;
+            document.getElementById('customerMobile').value = customer.mobile_number || '';
+            document.getElementById('customerNotes').value = customer.notes || '';
+            
+            // تحميل الشركات وتحديد الشركة المختارة
+            await populateCustomerCompanies();
+            if (customer.company_id) {
+                document.getElementById('customerCompanySelect').value = customer.company_id;
+            }
+            
+            // تحديث عنوان النموذج
+            document.getElementById('customerModalTitle').textContent = 'تعديل بيانات الزبون';
+            
+            // إظهار النموذج
+            const modal = new bootstrap.Modal(document.getElementById('customerModal'));
+            modal.show();
+        } else {
+            throw new Error('فشل في تحميل بيانات الزبون');
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل بيانات الزبون:', error);
+        showAlert('فشل في تحميل بيانات الزبون', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// عرض تفاصيل الزبون
+async function viewCustomerDetails(customerId) {
+    try {
+        showLoader('جاري تحميل تفاصيل الزبون...');
+        
+        const response = await fetch(`/api/customers/${customerId}`);
+        if (response.ok) {
+            const customer = await response.json();
+            
+            const modalBody = document.getElementById('customerDetailsBody');
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>المعلومات الشخصية</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>الاسم:</strong>
+                                    <div class="mt-1">${escapeHtml(customer.name)}</div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>رقم الهاتف:</strong>
+                                    <div class="mt-1">
+                                        <i class="fas fa-phone text-success me-2"></i>
+                                        ${escapeHtml(customer.phone_number)}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>رقم الجوال:</strong>
+                                    <div class="mt-1">
+                                        <i class="fas fa-mobile-alt text-info me-2"></i>
+                                        ${escapeHtml(customer.mobile_number || 'غير محدد')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>تفاصيل إضافية</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <strong>الشركة:</strong>
+                                    <div class="mt-1">
+                                        <i class="fas fa-building text-warning me-2"></i>
+                                        ${escapeHtml(customer.company_name || 'غير محدد')}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>تاريخ الإضافة:</strong>
+                                    <div class="mt-1">
+                                        <i class="fas fa-calendar text-primary me-2"></i>
+                                        ${formatDate(customer.created_at)}
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <strong>أضيف بواسطة:</strong>
+                                    <div class="mt-1">
+                                        <i class="fas fa-user-plus text-secondary me-2"></i>
+                                        ${escapeHtml(customer.added_by_name || 'غير محدد')}
+                                    </div>
+                                </div>
+                                ${customer.updated_at ? `
+                                    <div class="mb-3">
+                                        <strong>آخر تحديث:</strong>
+                                        <div class="mt-1">
+                                            <i class="fas fa-edit text-info me-2"></i>
+                                            ${formatDate(customer.updated_at)}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                ${customer.notes ? `
+                    <div class="card mt-3">
+                        <div class="card-header bg-light">
+                            <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>الملاحظات</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-light border">
+                                ${escapeHtml(customer.notes).replace(/\n/g, '<br>')}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('customerDetailsModal'));
+            modal.show();
+        } else {
+            throw new Error('فشل في تحميل تفاصيل الزبون');
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل تفاصيل الزبون:', error);
+        showAlert('فشل في تحميل تفاصيل الزبون', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// إنشاء طلب تسديد من الزبون
+function createPaymentFromCustomer(customerId) {
+    const customer = userCustomers.find(c => c.id === customerId);
+    if (!customer) {
+        showAlert('لم يتم العثور على بيانات الزبون', 'error');
+        return;
+    }
+    
+    // ملء نموذج طلب التسديد ببيانات الزبون
+    document.getElementById('servicePhoneNumber').value = customer.phone_number;
+    document.getElementById('serviceCustomerName').value = customer.name;
+    document.getElementById('serviceMobileNumber').value = customer.mobile_number || '';
+    
+    // تفعيل الحقول
+    const fieldsContainer = document.getElementById('customerFieldsContainer');
+    if (fieldsContainer) {
+        fieldsContainer.disabled = false;
+    }
+    
+    // تحديد الشركة إذا كانت متوفرة
+    if (customer.company_id) {
+        document.getElementById('serviceCompanySelect').value = customer.company_id;
+    }
+    
+    // تعيين علامة البحث
+    document.getElementById('customerSearched').value = 'true';
+    
+    // إظهار نموذج طلب التسديد
+    const modal = new bootstrap.Modal(document.getElementById('serviceRequestModal'));
+    modal.show();
+}
+
+// البحث في الزبائن
+function searchUserCustomers() {
+    currentCustomersPage = 1;
+    loadUserCustomers();
+}
+
+// مسح فلاتر البحث
+function clearCustomerFilters() {
+    document.getElementById('customerSearch').value = '';
+    document.getElementById('customerCompanyFilter').value = '';
+    searchUserCustomers();
 }
 
 // دالة hideLoader
