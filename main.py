@@ -244,11 +244,37 @@ def init_db():
             user_id INTEGER,
             title TEXT NOT NULL,
             message TEXT NOT NULL,
+            notification_type TEXT DEFAULT 'info',
+            priority TEXT DEFAULT 'normal',
             is_read INTEGER DEFAULT 0,
+            sent_by INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users (id)
+            read_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id),
+            FOREIGN KEY (sent_by) REFERENCES users (id)
         )
     ''')
+    
+    # إضافة الحقول الجديدة إذا لم تكن موجودة
+    try:
+        cursor.execute('ALTER TABLE notifications ADD COLUMN notification_type TEXT DEFAULT "info"')
+    except sqlite3.OperationalError:
+        pass  # الحقل موجود بالفعل
+    
+    try:
+        cursor.execute('ALTER TABLE notifications ADD COLUMN priority TEXT DEFAULT "normal"')
+    except sqlite3.OperationalError:
+        pass  # الحقل موجود بالفعل
+    
+    try:
+        cursor.execute('ALTER TABLE notifications ADD COLUMN sent_by INTEGER')
+    except sqlite3.OperationalError:
+        pass  # الحقل موجود بالفعل
+    
+    try:
+        cursor.execute('ALTER TABLE notifications ADD COLUMN read_at TIMESTAMP')
+    except sqlite3.OperationalError:
+        pass  # الحقل موجود بالفعل
 
     # جدول النسخ الاحتياطية
     cursor.execute('''
@@ -1172,6 +1198,8 @@ def send_user_notification(user_id):
     data = request.json
     title = data.get('title', '')
     message = data.get('message', '')
+    notification_type = data.get('type', 'info')
+    priority = data.get('priority', 'normal')
 
     if not title or not message:
         return jsonify({'error': 'العنوان والرسالة مطلوبان'}), 400
@@ -1182,9 +1210,10 @@ def send_user_notification(user_id):
 
         # إضافة الإشعار لقاعدة البيانات
         cursor.execute('''
-            INSERT INTO notifications (user_id, title, message, created_at)
-            VALUES (?, ?, ?, datetime('now', '+3 hours'))
-        ''', (user_id, title, message))
+            INSERT INTO notifications (user_id, title, message, notification_type, priority, 
+                                     sent_by, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+3 hours'))
+        ''', (user_id, title, message, notification_type, priority, session['user_id']))
 
         # جلب رقم هاتف المستخدم لإرسال إشعار التليجرام
         cursor.execute('SELECT phone FROM users WHERE id = ?', (user_id,))
@@ -1199,6 +1228,324 @@ def send_user_notification(user_id):
         send_telegram_notification(user_phone[0], telegram_message)
 
     return jsonify({'success': True, 'message': 'تم إرسال الإشعار بنجاح'})
+
+# إرسال إشعار لجميع المستخدمين
+@app.route('/api/notifications/broadcast', methods=['POST'])
+def broadcast_notification():
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    data = request.json
+    title = data.get('title', '')
+    message = data.get('message', '')
+    notification_type = data.get('type', 'info')
+    priority = data.get('priority', 'normal')
+    target_type = data.get('target_type', 'all')  # all, active, admins, users
+
+    if not title or not message:
+        return jsonify({'error': 'العنوان والرسالة مطلوبان'}), 400
+
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+
+            # تحديد المستخدمين المستهدفين
+            if target_type == 'admins':
+                cursor.execute('SELECT id, phone FROM users WHERE role = "admin" AND is_active = 1')
+            elif target_type == 'users':
+                cursor.execute('SELECT id, phone FROM users WHERE role = "user" AND is_active = 1')
+            elif target_type == 'active':
+                cursor.execute('SELECT id, phone FROM users WHERE is_active = 1')
+            else:  # all
+                cursor.execute('SELECT id, phone FROM users')
+
+            users = cursor.fetchall()
+
+            # إرسال الإشعار لكل مستخدم
+            for user in users:
+                user_id, phone = user
+                cursor.execute('''
+                    INSERT INTO notifications (user_id, title, message, notification_type, 
+                                             priority, sent_by, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, datetime('now', '+3 hours'))
+                ''', (user_id, title, message, notification_type, priority, session['user_id']))
+
+                # إرسال للتليجرام في خيط منفصل
+                if phone:
+                    telegram_message = f"📢 {title}\n\n{message}"
+                    threading.Thread(target=send_telegram_notification, 
+                                   args=(phone, telegram_message), daemon=True).start()
+
+            conn.commit()
+            conn.close()
+
+        return jsonify({
+            'success': True, 
+            'message': f'تم إرسال الإشعار لـ {len(users)} مستخدم بنجاح'
+        })
+
+    except Exception as e:
+        print(f"خطأ في إرسال الإشعار الجماعي: {e}")
+        return jsonify({'error': 'خطأ في إرسال الإشعار'}), 500
+
+# جلب جميع الإشعارات للإدارة
+@app.route('/api/admin/notifications', methods=['GET'])
+def get_admin_notifications():
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 20))
+        notification_type = request.args.get('type')
+        priority = request.args.get('priority')
+        read_status = request.args.get('read_status')
+        search = request.args.get('search', '').strip()
+
+        offset = (page - 1) * per_page
+
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+
+            # بناء الاستعلام مع الفلاتر
+            where_conditions = []
+            params = []
+
+            if notification_type:
+                where_conditions.append('n.notification_type = ?')
+                params.append(notification_type)
+
+            if priority:
+                where_conditions.append('n.priority = ?')
+                params.append(priority)
+
+            if read_status:
+                if read_status == 'read':
+                    where_conditions.append('n.is_read = 1')
+                elif read_status == 'unread':
+                    where_conditions.append('n.is_read = 0')
+
+            if search:
+                where_conditions.append('(n.title LIKE ? OR n.message LIKE ? OR u.name LIKE ?)')
+                search_pattern = f'%{search}%'
+                params.extend([search_pattern, search_pattern, search_pattern])
+
+            where_clause = 'WHERE ' + ' AND '.join(where_conditions) if where_conditions else ''
+
+            # جلب الإشعارات مع تفاصيل المستخدم والمرسل
+            query = f'''
+                SELECT n.id, n.title, n.message, n.notification_type, n.priority, 
+                       n.is_read, n.created_at,
+                       u.name as user_name, u.phone as user_phone,
+                       sender.name as sent_by_name
+                FROM notifications n
+                LEFT JOIN users u ON n.user_id = u.id
+                LEFT JOIN users sender ON n.sent_by = sender.id
+                {where_clause}
+                ORDER BY n.created_at DESC
+                LIMIT ? OFFSET ?
+            '''
+            params.extend([per_page, offset])
+
+            cursor.execute(query, params)
+            notifications = cursor.fetchall()
+
+            # جلب العدد الإجمالي
+            count_query = f'''
+                SELECT COUNT(*) FROM notifications n
+                LEFT JOIN users u ON n.user_id = u.id
+                {where_clause}
+            '''
+            cursor.execute(count_query, params[:-2])  # إزالة limit و offset
+            total = cursor.fetchone()[0]
+
+            conn.close()
+
+        return jsonify({
+            'notifications': [{
+                'id': notif[0],
+                'title': notif[1],
+                'message': notif[2],
+                'type': notif[3] or 'info',
+                'priority': notif[4] or 'normal',
+                'is_read': bool(notif[5]),
+                'created_at': notif[6],
+                'user_name': notif[7],
+                'user_phone': notif[8],
+                'sent_by_name': notif[9] or 'النظام'
+            } for notif in notifications],
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page
+        })
+
+    except Exception as e:
+        print(f"خطأ في جلب الإشعارات: {e}")
+        return jsonify({'error': 'خطأ في جلب الإشعارات'}), 500
+
+# إحصائيات الإشعارات
+@app.route('/api/admin/notifications/stats', methods=['GET'])
+def get_notifications_stats():
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+
+            # إحصائيات عامة
+            cursor.execute('''
+                SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN is_read = 0 THEN 1 END) as unread,
+                    COUNT(CASE WHEN is_read = 1 THEN 1 END) as read,
+                    COUNT(CASE WHEN notification_type = 'success' THEN 1 END) as success,
+                    COUNT(CASE WHEN notification_type = 'warning' THEN 1 END) as warning,
+                    COUNT(CASE WHEN notification_type = 'error' THEN 1 END) as error,
+                    COUNT(CASE WHEN notification_type = 'info' THEN 1 END) as info,
+                    COUNT(CASE WHEN priority = 'high' THEN 1 END) as high_priority,
+                    COUNT(CASE WHEN priority = 'normal' THEN 1 END) as normal_priority,
+                    COUNT(CASE WHEN priority = 'low' THEN 1 END) as low_priority,
+                    COUNT(CASE WHEN DATE(created_at) = DATE('now', 'localtime') THEN 1 END) as today,
+                    COUNT(CASE WHEN DATE(created_at) >= DATE('now', '-7 days', 'localtime') THEN 1 END) as this_week,
+                    COUNT(CASE WHEN DATE(created_at) >= DATE('now', '-30 days', 'localtime') THEN 1 END) as this_month
+                FROM notifications
+            ''')
+            stats = cursor.fetchone()
+
+            # أكثر المستخدمين تلقياً للإشعارات
+            cursor.execute('''
+                SELECT u.name, u.phone, COUNT(*) as notification_count
+                FROM notifications n
+                JOIN users u ON n.user_id = u.id
+                GROUP BY n.user_id
+                ORDER BY notification_count DESC
+                LIMIT 10
+            ''')
+            top_users = cursor.fetchall()
+
+            conn.close()
+
+        return jsonify({
+            'total': stats[0],
+            'unread': stats[1],
+            'read': stats[2],
+            'by_type': {
+                'success': stats[3],
+                'warning': stats[4],
+                'error': stats[5],
+                'info': stats[6]
+            },
+            'by_priority': {
+                'high': stats[7],
+                'normal': stats[8],
+                'low': stats[9]
+            },
+            'by_period': {
+                'today': stats[10],
+                'this_week': stats[11],
+                'this_month': stats[12]
+            },
+            'top_users': [{
+                'name': user[0],
+                'phone': user[1],
+                'count': user[2]
+            } for user in top_users]
+        })
+
+    except Exception as e:
+        print(f"خطأ في جلب إحصائيات الإشعارات: {e}")
+        return jsonify({'error': 'خطأ في جلب الإحصائيات'}), 500
+
+# حذف إشعار
+@app.route('/api/admin/notifications/<int:notification_id>', methods=['DELETE'])
+def delete_notification(notification_id):
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM notifications WHERE id = ?', (notification_id,))
+            conn.commit()
+            conn.close()
+
+        return jsonify({'success': True, 'message': 'تم حذف الإشعار بنجاح'})
+
+    except Exception as e:
+        print(f"خطأ في حذف الإشعار: {e}")
+        return jsonify({'error': 'خطأ في حذف الإشعار'}), 500
+
+# حذف إشعارات متعددة
+@app.route('/api/admin/notifications/bulk-delete', methods=['POST'])
+def bulk_delete_notifications():
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    data = request.json
+    notification_ids = data.get('ids', [])
+
+    if not notification_ids:
+        return jsonify({'error': 'يجب تحديد الإشعارات المراد حذفها'}), 400
+
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+            
+            placeholders = ','.join(['?'] * len(notification_ids))
+            cursor.execute(f'DELETE FROM notifications WHERE id IN ({placeholders})', notification_ids)
+            deleted_count = cursor.rowcount
+            
+            conn.commit()
+            conn.close()
+
+        return jsonify({
+            'success': True, 
+            'message': f'تم حذف {deleted_count} إشعار بنجاح'
+        })
+
+    except Exception as e:
+        print(f"خطأ في حذف الإشعارات: {e}")
+        return jsonify({'error': 'خطأ في حذف الإشعارات'}), 500
+
+# تعليم إشعارات كمقروءة
+@app.route('/api/admin/notifications/mark-read', methods=['POST'])
+def mark_notifications_read():
+    if 'user_id' not in session or session['user_role'] != 'admin':
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    data = request.json
+    notification_ids = data.get('ids', [])
+
+    if not notification_ids:
+        return jsonify({'error': 'يجب تحديد الإشعارات'}), 400
+
+    try:
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+            
+            placeholders = ','.join(['?'] * len(notification_ids))
+            cursor.execute(f'UPDATE notifications SET is_read = 1 WHERE id IN ({placeholders})', notification_ids)
+            updated_count = cursor.rowcount
+            
+            conn.commit()
+            conn.close()
+
+        return jsonify({
+            'success': True, 
+            'message': f'تم تعليم {updated_count} إشعار كمقروء'
+        })
+
+    except Exception as e:
+        print(f"خطأ في تعليم الإشعارات: {e}")
+        return jsonify({'error': 'خطأ في تعليم الإشعارات'}), 500
 
 @app.route('/api/users', methods=['POST'])
 def add_user():
