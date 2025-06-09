@@ -452,6 +452,136 @@
             border-radius: 6px;
         }
 
+        /* تحسين جدول الإشعارات */
+        #notificationsTableBody tr {
+            transition: all 0.3s ease;
+        }
+
+        #notificationsTableBody tr:hover {
+            background-color: rgba(0, 123, 255, 0.05);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+        }
+
+        .table th {
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 12px 8px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .table td {
+            padding: 12px 8px;
+            vertical-align: middle;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .notification-checkbox {
+            transform: scale(1.2);
+            margin: 0;
+        }
+
+        /* تحسين شارات الإشعارات */
+        .badge {
+            font-size: 10px;
+            padding: 4px 8px;
+        }
+
+        .text-truncate {
+            max-width: 200px;
+        }
+
+        /* استجابة الجدول للشاشات الصغيرة */
+        @media (max-width: 768px) {
+            .table-responsive {
+                border-radius: 8px;
+            }
+
+            .table th, .table td {
+                padding: 8px 4px;
+                font-size: 11px;
+            }
+
+            .btn-group-sm .btn {
+                padding: 4px 8px;
+                font-size: 10px;
+                margin: 1px;
+            }
+
+            .badge {
+                font-size: 9px;
+                padding: 3px 6px;
+            }
+
+            .text-truncate {
+                max-width: 100px;
+            }
+
+            /* إخفاء بعض الأعمدة في الشاشات الصغيرة */
+            .table th:nth-child(4),
+            .table td:nth-child(4),
+            .table th:nth-child(5),
+            .table td:nth-child(5),
+            .table th:nth-child(7),
+            .table td:nth-child(7),
+            .table th:nth-child(8),
+            .table td:nth-child(8) {
+                display: none;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .card-header {
+                padding: 0.75rem;
+            }
+
+            .card-header .d-flex {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .form-check {
+                margin-bottom: 0.5rem;
+            }
+
+            /* إخفاء المزيد من الأعمدة */
+            .table th:nth-child(3),
+            .table td:nth-child(3) {
+                display: none;
+            }
+
+            .table td {
+                padding: 6px 4px;
+                font-size: 10px;
+            }
+
+            .btn-group-sm .btn {
+                padding: 3px 6px;
+                font-size: 9px;
+            }
+        }
+
+        /* تحسين التمرير الأفقي */
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #dee2e6;
+            border-radius: 4px;
+        }
+
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #adb5bd;
+        }
+
         /* تحسين النصوص القابلة للنقر */
         .user-name-clickable {
             transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
@@ -676,6 +806,18 @@
                                         </div>
                                         <div class="fw-bold text-dark">طلبات التسديد</div>
                                         <small class="text-muted">مراجعة وموافقة الطلبات</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <div class="admin-service-card card h-100 border-0" onclick="showAdminSection('adminNotifications', this); setTimeout(() => { loadNotificationsDirectly(); loadNotificationsStatsDirectly(); }, 500);">
+                                    <div class="card-body text-center p-3">
+                                        <div class="service-icon bg-warning bg-opacity-15 rounded-circle mb-2 mx-auto d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                                            <i class="fas fa-bell text-warning"></i>
+                                        </div>
+                                        <div class="fw-bold text-dark">إدارة الإشعارات</div>
+                                        <small class="text-muted">إرسال ومراقبة الإشعارات</small>
                                     </div>
                                 </div>
                             </div>
@@ -944,6 +1086,205 @@
                                         </tr>
                                     </tbody>
                                 </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسم إدارة الإشعارات -->
+                <div id="adminNotifications" class="admin-section">
+                    <div class="action-buttons">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h4><i class="fas fa-bell me-2"></i> إدارة الإشعارات</h4>
+                            <div>
+                                <button class="btn btn-primary me-2" onclick="showBroadcastNotificationModal()">
+                                    <i class="fas fa-bullhorn me-2"></i> إشعار جماعي
+                                </button>
+                                <button class="btn btn-success" onclick="refreshNotificationsDirectly()">
+                                    <i class="fas fa-sync me-2"></i> تحديث
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- إحصائيات الإشعارات -->
+                    <div class="row mb-4">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card stats-card-modern h-100">
+                                <div class="card-body text-center">
+                                    <div class="stat-icon bg-primary bg-opacity-15 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-bell text-primary"></i>
+                                    </div>
+                                    <h5 class="mb-1 text-primary" id="totalNotifications">0</h5>
+                                    <p class="text-muted mb-0 small">إجمالي الإشعارات</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card stats-card-modern h-100">
+                                <div class="card-body text-center">
+                                    <div class="stat-icon bg-warning bg-opacity-15 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-envelope text-warning"></i>
+                                    </div>
+                                    <h5 class="mb-1 text-warning" id="unreadNotifications">0</h5>
+                                    <p class="text-muted mb-0 small">غير مقروءة</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card stats-card-modern h-100">
+                                <div class="card-body text-center">
+                                    <div class="stat-icon bg-success bg-opacity-15 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-calendar-day text-success"></i>
+                                    </div>
+                                    <h5 class="mb-1 text-success" id="todayNotifications">0</h5>
+                                    <p class="text-muted mb-0 small">اليوم</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="card stats-card-modern h-100">
+                                <div class="card-body text-center">
+                                    <div class="stat-icon bg-danger bg-opacity-15 rounded-circle mb-3 mx-auto d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                                    </div>
+                                    <h5 class="mb-1 text-danger" id="highPriorityNotifications">0</h5>
+                                    <p class="text-muted mb-0 small">أولوية عالية</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- أدوات البحث والفلترة -->
+                    <div class="row mb-3">
+                        <div class="col-md-3">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="notificationsSearch" placeholder="البحث في الإشعارات...">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control" id="notificationTypeFilter">
+                                <option value="">جميع الأنواع</option>
+                                <option value="info">معلومات</option>
+                                <option value="success">نجاح</option>
+                                <option value="warning">تحذير</option>
+                                <option value="error">خطأ</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control" id="notificationPriorityFilter">
+                                <option value="">جميع الأولويات</option>
+                                <option value="high">عالية</option>
+                                <option value="normal">عادية</option>
+                                <option value="low">منخفضة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select class="form-control" id="notificationReadFilter">
+                                <option value="">الكل</option>
+                                <option value="read">مقروءة</option>
+                                <option value="unread">غير مقروءة</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="btn-group w-100">
+                                <button class="btn btn-outline-secondary" onclick="clearNotificationFilters()">
+                                    <i class="fas fa-times me-1"></i> مسح
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="showBulkActionsModal()">
+                                    <i class="fas fa-cogs me-1"></i> عمليات متعددة
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- جدول الإشعارات -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="selectAllNotifications" onchange="toggleSelectAllNotifications()">
+                                        <label class="form-check-label fw-bold" for="selectAllNotifications">
+                                            <i class="fas fa-check-square me-1"></i>
+                                            تحديد الكل
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 text-end">
+                                    <div id="notificationsPaginationInfo" class="text-muted small"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
+                                <table class="table table-hover table-striped mb-0" style="min-width: 1200px;">
+                                    <thead class="table-light sticky-top">
+                                        <tr>
+                                            <th class="text-center" style="width: 60px; min-width: 60px;">
+                                                <i class="fas fa-check"></i>
+                                            </th>
+                                            <th style="width: 300px; min-width: 250px;">
+                                                <i class="fas fa-bell me-1"></i>
+                                                الإشعار
+                                            </th>
+                                            <th style="width: 150px; min-width: 120px;">
+                                                <i class="fas fa-user me-1"></i>
+                                                المستخدم
+                                            </th>
+                                            <th class="text-center" style="width: 100px; min-width: 80px;">
+                                                <i class="fas fa-tag me-1"></i>
+                                                النوع
+                                            </th>
+                                            <th class="text-center" style="width: 100px; min-width: 80px;">
+                                                <i class="fas fa-flag me-1"></i>
+                                                الأولوية
+                                            </th>
+                                            <th class="text-center" style="width: 100px; min-width: 80px;">
+                                                <i class="fas fa-eye me-1"></i>
+                                                الحالة
+                                            </th>
+                                            <th style="width: 150px; min-width: 120px;">
+                                                <i class="fas fa-calendar me-1"></i>
+                                                التاريخ
+                                            </th>
+                                            <th style="width: 120px; min-width: 100px;">
+                                                <i class="fas fa-user-tie me-1"></i>
+                                                المرسل
+                                            </th>
+                                            <th class="text-center" style="width: 150px; min-width: 120px;">
+                                                <i class="fas fa-cogs me-1"></i>
+                                                الإجراءات
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="notificationsTableBody">
+                                        <tr>
+                                            <td colspan="9" class="text-center p-4">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">جاري التحميل...</span>
+                                                </div>
+                                                <div class="mt-2">جاري تحميل الإشعارات...</div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-light">
+                            <!-- التنقل بين الصفحات -->
+                            <div class="row align-items-center">
+                                <div class="col-md-6">
+                                    <div id="notificationsPaginationInfoBottom" class="text-muted small"></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <nav aria-label="تنقل الإشعارات">
+                                        <ul class="pagination justify-content-end mb-0" id="notificationsPagination">
+                                            <!-- سيتم إضافة أزرار التنقل هنا -->
+                                        </ul>
+                                    </nav>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1500,6 +1841,151 @@
         </div>
     </div>
 
+    <!-- نموذج الإشعار الجماعي -->
+    <div class="modal fade" id="broadcastNotificationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-bullhorn me-2"></i>
+                        إرسال إشعار جماعي
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="broadcastNotificationForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">عنوان الإشعار *</label>
+                                    <input type="text" class="form-control" id="broadcastTitle" required placeholder="أدخل عنوان الإشعار">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">المستهدفون</label>
+                                    <select class="form-control" id="broadcastTarget">
+                                        <option value="all">جميع المستخدمين</option>
+                                        <option value="active">المستخدمين النشطين فقط</option>
+                                        <option value="admins">المديرين فقط</option>
+                                        <option value="users">المستخدمين العاديين فقط</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">نوع الإشعار</label>
+                                    <select class="form-control" id="broadcastType">
+                                        <option value="info">معلومات</option>
+                                        <option value="success">نجاح</option>
+                                        <option value="warning">تحذير</option>
+                                        <option value="error">خطأ</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الأولوية</label>
+                                    <select class="form-control" id="broadcastPriority">
+                                        <option value="normal">عادية</option>
+                                        <option value="high">عالية</option>
+                                        <option value="low">منخفضة</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">نص الإشعار *</label>
+                            <textarea class="form-control" id="broadcastMessage" rows="4" required placeholder="أدخل محتوى الإشعار"></textarea>
+                            <div class="form-text">سيتم إرسال الإشعار عبر النظام وتيليجرام للمستخدمين المسجلين</div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="sendBroadcastNotification()">
+                        <i class="fas fa-paper-plane me-2"></i>إرسال الإشعار
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج تفاصيل الإشعار -->
+    <div class="modal fade" id="notificationDetailsModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-bell me-2"></i>
+                        تفاصيل الإشعار
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="notificationDetailsBody">
+                    <!-- سيتم تحميل التفاصيل هنا -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج العمليات المتعددة -->
+    <div class="modal fade" id="bulkActionsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cogs me-2"></i>
+                        عمليات متعددة
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <span id="selectedCount">تم تحديد 0 إشعار</span>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">اختر العملية:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="bulkAction" id="bulkMarkRead" value="mark_read">
+                            <label class="form-check-label" for="bulkMarkRead">
+                                <i class="fas fa-check text-success me-2"></i>
+                                تعليم كمقروءة
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="bulkAction" id="bulkDelete" value="delete">
+                            <label class="form-check-label" for="bulkDelete">
+                                <i class="fas fa-trash text-danger me-2"></i>
+                                حذف الإشعارات
+                            </label>
+                        </div>
+                    </div>
+                    <div class="alert alert-warning" id="deleteWarning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تحذير:</strong> لا يمكن التراجع عن عملية الحذف!
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-primary" onclick="executeBulkAction()">
+                        <i class="fas fa-check me-2"></i>تنفيذ العملية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- تحميل المكتبات -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
@@ -1677,6 +2163,25 @@
                         break;
                     case 'inquiryRequests':
                         await loadPaymentRequests();
+                        break;
+                    case 'adminNotifications':
+                        console.log('تحميل إدارة الإشعارات...');
+                        // التأكد من وجود الدوال في النطاق العام
+                        if (typeof loadNotificationsAdmin === 'function') {
+                            await loadNotificationsAdmin();
+                        } else {
+                            console.error('دالة loadNotificationsAdmin غير موجودة');
+                            // تحميل مباشر كحل بديل
+                            await loadNotificationsDirectly();
+                        }
+                        
+                        if (typeof loadNotificationsStats === 'function') {
+                            await loadNotificationsStats();
+                        } else {
+                            console.error('دالة loadNotificationsStats غير موجودة');
+                            // تحميل مباشر كحل بديل
+                            await loadNotificationsStatsDirectly();
+                        }
                         break;
                     case 'settings':
                         await loadSiteSettingsAdmin();
@@ -2434,6 +2939,266 @@
             } catch (error) {
                 console.error('خطأ في تحميل النسخ الاحتياطية:', error);
             }
+        }
+
+        // دوال التحميل المباشرة للإشعارات (حل احتياطي)
+        async function loadNotificationsDirectly() {
+            try {
+                console.log('تحميل الإشعارات مباشرة...');
+                showTableLoading(document.getElementById('notificationsTableBody'), 9, 'جاري تحميل الإشعارات...');
+                
+                const searchTerm = document.getElementById('notificationsSearch')?.value || '';
+                const typeFilter = document.getElementById('notificationTypeFilter')?.value || '';
+                const priorityFilter = document.getElementById('notificationPriorityFilter')?.value || '';
+                const readFilter = document.getElementById('notificationReadFilter')?.value || '';
+                
+                const params = new URLSearchParams({
+                    page: 1,
+                    per_page: 20
+                });
+                
+                if (searchTerm) params.append('search', searchTerm);
+                if (typeFilter) params.append('type', typeFilter);
+                if (priorityFilter) params.append('priority', priorityFilter);
+                if (readFilter) params.append('read_status', readFilter);
+                
+                const response = await fetch(`/api/admin/notifications?${params}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    displayNotificationsDirectly(data);
+                    updateNotificationsPaginationDirectly(data);
+                } else {
+                    throw new Error('فشل في تحميل الإشعارات');
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل الإشعارات:', error);
+                showTableError(document.getElementById('notificationsTableBody'), 9, error.message, 'loadNotificationsDirectly()');
+            }
+        }
+
+        async function loadNotificationsStatsDirectly() {
+            try {
+                const response = await fetch('/api/admin/notifications/stats');
+                if (response.ok) {
+                    const stats = await response.json();
+                    updateNotificationsStatsDisplayDirectly(stats);
+                }
+            } catch (error) {
+                console.error('خطأ في تحميل إحصائيات الإشعارات:', error);
+            }
+        }
+
+        function displayNotificationsDirectly(data) {
+            const tbody = document.getElementById('notificationsTableBody');
+            if (!tbody) return;
+            
+            if (!data.notifications || data.notifications.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="text-center">
+                            <div class="p-4">
+                                <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                                <p class="text-muted">لا توجد إشعارات</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tbody.innerHTML = data.notifications.map(notification => {
+                const typeColors = {
+                    'info': 'text-info',
+                    'success': 'text-success',
+                    'warning': 'text-warning',
+                    'error': 'text-danger'
+                };
+                
+                const priorityColors = {
+                    'high': 'text-danger',
+                    'normal': 'text-primary',
+                    'low': 'text-secondary'
+                };
+                
+                const typeIcons = {
+                    'info': 'fa-info-circle',
+                    'success': 'fa-check-circle',
+                    'warning': 'fa-exclamation-triangle',
+                    'error': 'fa-times-circle'
+                };
+                
+                const priorityIcons = {
+                    'high': 'fa-exclamation-circle',
+                    'normal': 'fa-flag',
+                    'low': 'fa-minus-circle'
+                };
+                
+                return `
+                    <tr class="${notification.is_read ? '' : 'table-warning'}" 
+                        style="transition: all 0.3s ease;">
+                        <td>
+                            <input type="checkbox" class="notification-checkbox" 
+                                   value="${notification.id}">
+                        </td>
+                        <td>
+                            <div class="fw-bold">${notification.title}</div>
+                            <div class="text-muted small text-truncate" style="max-width: 200px;">
+                                ${notification.message}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-bold">${notification.user_name || 'غير محدد'}</div>
+                            <div class="text-muted small">${notification.user_phone || ''}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light ${typeColors[notification.type]}">
+                                <i class="fas ${typeIcons[notification.type]} me-1"></i>
+                                ${getNotificationTypeTextDirect(notification.type)}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-light ${priorityColors[notification.priority]}">
+                                <i class="fas ${priorityIcons[notification.priority]} me-1"></i>
+                                ${getNotificationPriorityTextDirect(notification.priority)}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'}">
+                                <i class="fas ${notification.is_read ? 'fa-check' : 'fa-clock'} me-1"></i>
+                                ${notification.is_read ? 'مقروء' : 'غير مقروء'}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="small">${formatDate(notification.created_at)}</div>
+                        </td>
+                        <td>
+                            <div class="small">${notification.sent_by_name}</div>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-info" 
+                                        onclick="showNotificationDetailsDirectly(${notification.id})"
+                                        title="عرض التفاصيل">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" 
+                                        onclick="deleteNotificationDirectly(${notification.id})"
+                                        title="حذف">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function updateNotificationsPaginationDirectly(data) {
+            const paginationInfo = document.getElementById('notificationsPaginationInfo');
+            const pagination = document.getElementById('notificationsPagination');
+            
+            if (paginationInfo) {
+                const start = (data.page - 1) * data.per_page + 1;
+                const end = Math.min(data.page * data.per_page, data.total);
+                paginationInfo.textContent = `عرض ${start}-${end} من ${data.total} إشعار`;
+            }
+            
+            if (pagination && data.total_pages > 1) {
+                pagination.innerHTML = '';
+                
+                // زر السابق
+                if (data.page > 1) {
+                    pagination.innerHTML += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="loadNotificationsDirectly()">السابق</a>
+                        </li>
+                    `;
+                }
+                
+                // أرقام الصفحات
+                for (let i = Math.max(1, data.page - 2); i <= Math.min(data.total_pages, data.page + 2); i++) {
+                    pagination.innerHTML += `
+                        <li class="page-item ${i === data.page ? 'active' : ''}">
+                            <a class="page-link" href="#" onclick="loadNotificationsDirectly()">${i}</a>
+                        </li>
+                    `;
+                }
+                
+                // زر التالي
+                if (data.page < data.total_pages) {
+                    pagination.innerHTML += `
+                        <li class="page-item">
+                            <a class="page-link" href="#" onclick="loadNotificationsDirectly()">التالي</a>
+                        </li>
+                    `;
+                }
+            }
+        }
+
+        function updateNotificationsStatsDisplayDirectly(stats) {
+            const elements = {
+                totalNotifications: document.getElementById('totalNotifications'),
+                unreadNotifications: document.getElementById('unreadNotifications'),
+                todayNotifications: document.getElementById('todayNotifications'),
+                highPriorityNotifications: document.getElementById('highPriorityNotifications')
+            };
+            
+            if (elements.totalNotifications) elements.totalNotifications.textContent = stats.total || 0;
+            if (elements.unreadNotifications) elements.unreadNotifications.textContent = stats.unread || 0;
+            if (elements.todayNotifications) elements.todayNotifications.textContent = stats.by_period?.today || 0;
+            if (elements.highPriorityNotifications) elements.highPriorityNotifications.textContent = stats.by_priority?.high || 0;
+        }
+
+        function getNotificationTypeTextDirect(type) {
+            const types = {
+                'info': 'معلومات',
+                'success': 'نجاح',
+                'warning': 'تحذير',
+                'error': 'خطأ'
+            };
+            return types[type] || 'معلومات';
+        }
+
+        function getNotificationPriorityTextDirect(priority) {
+            const priorities = {
+                'high': 'عالية',
+                'normal': 'عادية',
+                'low': 'منخفضة'
+            };
+            return priorities[priority] || 'عادية';
+        }
+
+        async function showNotificationDetailsDirectly(notificationId) {
+            console.log('عرض تفاصيل الإشعار:', notificationId);
+            showMessage('تفاصيل الإشعار متاحة قريباً', 'info');
+        }
+
+        async function deleteNotificationDirectly(notificationId) {
+            if (!confirm('هل أنت متأكد من حذف هذا الإشعار؟')) return;
+            
+            try {
+                const response = await fetch(`/api/admin/notifications/${notificationId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showMessage('تم حذف الإشعار بنجاح', 'success');
+                    loadNotificationsDirectly();
+                } else {
+                    showMessage(result.error || 'فشل في حذف الإشعار', 'error');
+                }
+            } catch (error) {
+                console.error('خطأ في حذف الإشعار:', error);
+                showMessage('خطأ في حذف الإشعار', 'error');
+            }
+        }
+
+        async function refreshNotificationsDirectly() {
+            await loadNotificationsDirectly();
+            await loadNotificationsStatsDirectly();
+            showMessage('تم تحديث الإشعارات بنجاح', 'success');
         }
 
         // تحميل إحصائيات الإدارة
