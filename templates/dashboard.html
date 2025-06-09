@@ -173,6 +173,18 @@
                                 </div>
                             </div>
                         </div>
+
+                        <div class="col-md-4 mb-3">
+                            <div class="nav-menu-item card h-100 border-0 shadow-sm" style="cursor: pointer; transition: all 0.3s ease;" onclick="showSection('customers'); scrollToSection('customers');">
+                                <div class="card-body text-center p-3">
+                                    <div class="nav-icon bg-info bg-opacity-15 rounded-circle mb-3 mx-auto" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-users text-info"></i>
+                                    </div>
+                                    <div class="fw-bold text-dark">زبائني</div>
+                                    <small class="text-muted">إدارة قائمة الزبائن</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- قسم الإعدادات -->
@@ -323,6 +335,106 @@
         </div>
     </div>
 
+    <!-- صفحة إدارة الزبائن -->
+    <div id="customers" class="section-content" style="display: none;">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <h5 class="mb-0">
+                            <i class="fas fa-users me-2 text-info"></i>
+                            إدارة زبائني
+                        </h5>
+                        <small class="text-muted">قائمة الزبائن التي أضفتها</small>
+                    </div>
+                    <div class="col-auto">
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-success btn-sm" onclick="showAddCustomerModal()">
+                                <i class="fas fa-plus me-1"></i> إضافة زبون
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="loadUserCustomers()">
+                                <i class="fas fa-sync"></i> تحديث
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- فلاتر البحث -->
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" class="form-control" id="customerSearch" 
+                                   placeholder="البحث بالاسم أو رقم الهاتف">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="customerCompanyFilter">
+                            <option value="">جميع الشركات</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="btn-group w-100" role="group">
+                            <button class="btn btn-primary" onclick="searchUserCustomers()">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary" onclick="clearCustomerFilters()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- جدول الزبائن -->
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>الزبون</th>
+                                <th>رقم الهاتف</th>
+                                <th>رقم الجوال</th>
+                                <th>الشركة</th>
+                                <th>تاريخ الإضافة</th>
+                                <th class="text-center">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userCustomersTableBody">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="spinner-border text-info" role="status">
+                                        <span class="visually-hidden">جاري التحميل...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- التنقل بين الصفحات -->
+                <div class="row align-items-center mt-3">
+                    <div class="col-md-6">
+                        <small class="text-muted" id="customersPaginationInfo">عرض البيانات...</small>
+                    </div>
+                    <div class="col-md-6">
+                        <nav aria-label="تنقل الزبائن">
+                            <ul class="pagination pagination-sm justify-content-end mb-0" id="customersPagination">
+                                <!-- سيتم ملء أزرار التنقل هنا -->
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- قسم الخدمات الرئيسية المخفي -->
+    <div id="mainServices" class="section-content" style="display: block;">
+        <!-- محتوى الخدمات الرئيسية سيكون هنا -->
+    </div>
+
     <!-- الإحصائيات السريعة في أسفل الصفحة -->
     <div class="row mt-5 mb-4">
         <div class="col-12">
@@ -465,6 +577,16 @@
                     </div>
                     <span class="badge bg-danger rounded-pill position-absolute" id="sidebarNotificationBadge" 
                           style="display: none; top: 0.5rem; left: 0.5rem; font-size: 10px; min-width: 20px; height: 20px; line-height: 20px;">0</span>
+                </a>
+
+                <a href="#" class="nav-menu-item d-flex align-items-center p-3 mb-2 text-decoration-none rounded-3" onclick="showSection('customers'); scrollToSection('customers'); closeSidebar();">
+                    <div class="nav-icon bg-info bg-opacity-15 rounded-circle me-3" style="width: 45px; height: 45px; display: flex; align-items: center; justify-content: center;">
+                        <i class="fas fa-users text-info"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-bold text-dark">زبائني</div>
+                        <small class="text-muted">إدارة قائمة الزبائن</small>
+                    </div>
                 </a>
             </div>
         </div>
@@ -750,6 +872,109 @@
     </div>
 </div>
 
+<!-- نموذج إضافة/تعديل زبون -->
+<div class="modal fade" id="customerModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="customerModalTitle">
+                    <i class="fas fa-user-plus me-2"></i>
+                    إضافة زبون جديد
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="customerForm">
+                    <input type="hidden" id="customerId">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customerName" class="form-label">اسم الزبون <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-user"></i>
+                                </span>
+                                <input type="text" class="form-control" id="customerName" required 
+                                       placeholder="أدخل اسم الزبون">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customerPhone" class="form-label">رقم الهاتف <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-phone"></i>
+                                </span>
+                                <input type="tel" class="form-control" id="customerPhone" required 
+                                       placeholder="أدخل رقم الهاتف">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="customerMobile" class="form-label">رقم الجوال</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-mobile-alt"></i>
+                                </span>
+                                <input type="tel" class="form-control" id="customerMobile" 
+                                       placeholder="رقم الجوال (اختياري)">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="customerCompanySelect" class="form-label">الشركة</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-building"></i>
+                                </span>
+                                <select class="form-select" id="customerCompanySelect">
+                                    <option value="">اختر الشركة (اختياري)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="customerNotes" class="form-label">ملاحظات</label>
+                        <textarea class="form-control" id="customerNotes" rows="3" 
+                                  placeholder="أي ملاحظات إضافية عن الزبون..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button type="button" class="btn btn-info" onclick="saveCustomer()">
+                    <i class="fas fa-save"></i> حفظ الزبون
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- نموذج عرض تفاصيل الزبون -->
+<div class="modal fade" id="customerDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-user me-2"></i>
+                    تفاصيل الزبون
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="customerDetailsBody">
+                    <!-- سيتم ملء التفاصيل هنا -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // دوال القائمة الجانبية
 function toggleSidebar() {
@@ -792,58 +1017,111 @@ function updateNotificationBadges(count) {
 
 // تحسين دالة showSection لإخفاء كل شيء عدا القسم المطلوب مع التمرير التلقائي
 function showSection(sectionId) {
-    // إخفاء جميع الأقسام
-    const sections = ['transactions', 'notifications'];
-    sections.forEach(section => {
-        const element = document.getElementById(section);
-        if (element) {
-            element.style.display = 'none';
+    try {
+        console.log(`إظهار القسم: ${sectionId}`);
+
+        // التحقق من صحة معرف القسم
+        const validSections = ['mainServices', 'notifications', 'transactions', 'customers'];
+        if (!validSections.includes(sectionId)) {
+            throw new Error(`معرف القسم غير صحيح: ${sectionId}`);
         }
-    });
 
-    // إظهار القسم المطلوب
-    const targetSection = document.getElementById(sectionId);
-    if (targetSection) {
-        targetSection.style.display = 'block';
-        targetSection.classList.add('fade-in');
-        
-        // التمرير التلقائي إلى القسم المطلوب
-        setTimeout(() => {
-            targetSection.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start',
-                inline: 'nearest'
-            });
-        }, 100);
-    }
+        // إخفاء جميع الأقسام
+        const sectionsToHide = ['mainServices', 'notifications', 'transactions', 'customers'];
+        sectionsToHide.forEach(section => {
+            const element = document.getElementById(section);
+            if (element) {
+                element.style.display = 'none';
+                element.classList.remove('fade-in');
+            }
+        });
 
-    // تحديث القائمة النشطة في الشريط الجانبي
-    const navItems = document.querySelectorAll('.list-group-item');
-    navItems.forEach(item => {
-        item.classList.remove('active');
-    });
-
-    // تفعيل العنصر المناسب
-    const targetNavItem = document.querySelector(`[onclick*="showSection('${sectionId}')"]`);
-    if (targetNavItem) {
-        targetNavItem.classList.add('active');
-    }
-
-    // تحميل البيانات حسب القسم
-    setTimeout(() => {
-        switch (sectionId) {
-            case 'transactions':
-                if (typeof loadUserTransactions === 'function') {
-                    loadUserTransactions();
-                }
-                break;
-            case 'notifications':
-                if (typeof loadNotifications === 'function') {
-                    loadNotifications();
-                }
-                break;
+        // إظهار القسم المطلوب
+        const targetSection = document.getElementById(sectionId);
+        if (targetSection) {
+            targetSection.style.display = 'block';
+            targetSection.classList.add('fade-in');
+            
+            // التمرير التلقائي إلى القسم المطلوب
+            setTimeout(() => {
+                targetSection.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'start',
+                    inline: 'nearest'
+                });
+            }, 100);
+        } else {
+            throw new Error(`القسم ${sectionId} غير موجود في الصفحة`);
         }
-    }, 200);
+
+        // تحديث القائمة النشطة
+        const navItems = document.querySelectorAll('.list-group-item');
+        navItems.forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // العثور على الرابط النشط وتفعيله
+        const targetNavItem = document.querySelector(`[onclick*="showSection('${sectionId}')"]`);
+        if (targetNavItem) {
+            targetNavItem.classList.add('active');
+        }
+
+        // تحميل البيانات حسب القسم مع معالجة الأخطاء المحسنة
+        setTimeout(async () => {
+            try {
+                switch (sectionId) {
+                    case 'mainServices':
+                        // تحميل الإحصائيات والشركات
+                        await Promise.all([
+                            retryWithDelay(() => loadUserStats(), 2000, 2),
+                            retryWithDelay(() => loadCompanies(), 2000, 2)
+                        ]);
+                        // تحديث قائمة الشركات في نموذج الطلب
+                        populateCompanySelect();
+                        break;
+                    case 'notifications':
+                        await retryWithDelay(() => loadNotifications(), 2000, 2);
+                        break;
+                    case 'transactions':
+                        await retryWithDelay(() => loadUserTransactions(), 2000, 2);
+                        break;
+                    case 'customers':
+                        await retryWithDelay(() => loadUserCustomers(), 2000, 2);
+                        // تحميل الشركات للفلتر
+                        if (typeof loadCompanies === 'function') {
+                            loadCompanies().then(() => {
+                                populateCustomerCompanyFilter();
+                            });
+                        }
+                        break;
+                }
+            } catch (error) {
+                console.error(`خطأ في تحميل بيانات القسم ${sectionId}:`, error);
+                
+                // عرض رسالة خطأ مناسبة داخل القسم
+                const errorHtml = `
+                    <div class="alert alert-warning text-center m-3">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h6>خطأ في تحميل البيانات</h6>
+                        <p>${error.message || 'حدث خطأ غير متوقع'}</p>
+                        <button class="btn btn-outline-warning btn-sm" onclick="showSection('${sectionId}')">
+                            <i class="fas fa-redo"></i> إعادة المحاولة
+                        </button>
+                    </div>
+                `;
+
+                // إضافة رسالة الخطأ في بداية القسم
+                const existingError = targetSection.querySelector('.alert-warning');
+                if (!existingError) {
+                    targetSection.insertAdjacentHTML('afterbegin', errorHtml);
+                }
+            }
+        }, 200);
+
+    } catch (error) {
+        console.error(`خطأ عام في إظهار القسم ${sectionId}:`, error);
+        showMessage(`خطأ في عرض القسم: ${error.message}`, 'error');
+    }
 }
 
 // تحسين واجهة تغيير كلمة المرور
@@ -1038,7 +1316,7 @@ function scrollToSection(sectionId) {
 // إظهار الصفحة الرئيسية عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     // إخفاء جميع الأقسام في البداية
-    const sections = ['transactions', 'notifications'];
+    const sections = ['transactions', 'notifications', 'customers'];
     sections.forEach(section => {
         const element = document.getElementById(section);
         if (element) {
@@ -1046,6 +1324,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
+// تحميل الشركات في فلتر البحث
+function populateCustomerCompanyFilter() {
+    const filterSelect = document.getElementById('customerCompanyFilter');
+    if (!filterSelect || !companies) return;
+    
+    filterSelect.innerHTML = '<option value="">جميع الشركات</option>';
+    companies.forEach(company => {
+        if (company.is_active) {
+            filterSelect.innerHTML += `<option value="${company.id}">${company.name}</option>`;
+        }
+    });
+}
 </script>
 
 <style>
