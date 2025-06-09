@@ -422,7 +422,7 @@ let isLoadingNotifications = false;
 let notificationsTotalPages = 0;
 let notificationsTotalCount = 0;
 
-// تحميل الإشعارات
+// تحميل الإشعارات المحدث
 async function loadNotificationsAdmin() {
     if (isLoadingNotifications) return;
     
@@ -435,16 +435,18 @@ async function loadNotificationsAdmin() {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="9" class="text-center p-4">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">جاري التحميل...</span>
+                        <div class="d-flex justify-content-center align-items-center">
+                            <div class="spinner-border text-primary me-3" role="status">
+                                <span class="visually-hidden">جاري التحميل...</span>
+                            </div>
+                            <div>جاري تحميل الإشعارات...</div>
                         </div>
-                        <div class="mt-2">جاري تحميل الإشعارات...</div>
                     </td>
                 </tr>
             `;
         }
         
-        const searchTerm = document.getElementById('notificationsSearch')?.value || '';
+        const searchTerm = document.getElementById('notificationsSearch')?.value?.trim() || '';
         const typeFilter = document.getElementById('notificationTypeFilter')?.value || '';
         const priorityFilter = document.getElementById('notificationPriorityFilter')?.value || '';
         const readFilter = document.getElementById('notificationReadFilter')?.value || '';
@@ -459,12 +461,18 @@ async function loadNotificationsAdmin() {
         if (priorityFilter) params.append('priority', priorityFilter);
         if (readFilter) params.append('read_status', readFilter);
         
-        console.log('تحميل الإشعارات - الصفحة:', currentNotificationsPage);
+        console.log('تحميل الإشعارات - الصفحة:', currentNotificationsPage, 'المعايير:', {searchTerm, typeFilter, priorityFilter, readFilter});
         
-        const response = await fetch(`/api/admin/notifications?${params}`);
+        const response = await fetch(`/api/admin/notifications?${params}`, {
+            method: 'GET',
+            headers: {
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
         if (response.ok) {
             const data = await response.json();
-            console.log('تم تحميل الإشعارات:', data.notifications?.length || 0);
+            console.log('تم تحميل الإشعارات:', data.notifications?.length || 0, 'من إجمالي:', data.total);
             
             notificationsData = data.notifications || [];
             notificationsTotalPages = data.total_pages || 0;
@@ -477,10 +485,16 @@ async function loadNotificationsAdmin() {
             selectedNotifications.clear();
             updateBulkActionsButton();
             updateSelectAllCheckbox();
+            
+            // إخفاء أي رسائل خطأ سابقة
+            const errorAlerts = document.querySelectorAll('.notification-error-alert');
+            errorAlerts.forEach(alert => alert.remove());
+            
         } else if (response.status === 401) {
             showAlert('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', 'error');
         } else {
-            throw new Error('فشل في تحميل الإشعارات');
+            const errorText = await response.text().catch(() => 'خطأ غير معروف');
+            throw new Error(`خطأ في الخادم (${response.status}): ${errorText}`);
         }
     } catch (error) {
         console.error('خطأ في تحميل الإشعارات:', error);
@@ -492,12 +506,14 @@ async function loadNotificationsAdmin() {
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="9" class="text-center p-4">
-                        <div class="alert alert-danger d-inline-block">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            خطأ في تحميل الإشعارات
+                        <div class="alert alert-danger d-inline-block notification-error-alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>خطأ في تحميل الإشعارات</strong>
+                            <br>
+                            <small class="text-muted">${error.message}</small>
                             <br>
                             <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadNotificationsAdmin()">
-                                <i class="fas fa-redo"></i> إعادة المحاولة
+                                <i class="fas fa-redo me-1"></i> إعادة المحاولة
                             </button>
                         </div>
                     </td>
@@ -509,19 +525,25 @@ async function loadNotificationsAdmin() {
     }
 }
 
-// عرض الإشعارات
+// عرض الإشعارات المحدث
 function displayNotifications(data) {
     const tbody = document.getElementById('notificationsTableBody');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error('لم يتم العثور على جدول الإشعارات');
+        return;
+    }
     
     if (!data.notifications || data.notifications.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="text-center p-4">
-                    <div class="text-center">
+                <td colspan="9" class="text-center p-5">
+                    <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">لا توجد إشعارات</p>
+                        <h6 class="text-muted mb-2">لا توجد إشعارات</h6>
                         <small class="text-muted">جرب تغيير معايير البحث أو الفلترة</small>
+                        <button class="btn btn-sm btn-outline-primary mt-3" onclick="clearNotificationFilters()">
+                            <i class="fas fa-times me-1"></i> مسح الفلاتر
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -534,7 +556,7 @@ function displayNotifications(data) {
     }
     
     let html = '';
-    data.notifications.forEach(notification => {
+    data.notifications.forEach((notification, index) => {
         const typeColors = {
             'info': 'info',
             'success': 'success',
@@ -565,77 +587,86 @@ function displayNotifications(data) {
         const rowClass = notification.is_read ? '' : 'table-warning';
         
         html += `
-            <tr class="${rowClass} notification-row" 
-                style="cursor: pointer;" 
-                data-notification-id="${notification.id}">
+            <tr class="${rowClass} notification-row clickable-row" 
+                data-notification-id="${notification.id}"
+                data-notification-index="${index}"
+                onclick="handleNotificationRowClick(event, ${notification.id})">
                 <td class="text-center align-middle" onclick="event.stopPropagation()">
-                    <input type="checkbox" 
-                           class="form-check-input notification-checkbox" 
-                           value="${notification.id}" 
-                           id="checkbox_${notification.id}"
-                           ${isSelected ? 'checked' : ''}
-                           onchange="toggleNotificationSelection(${notification.id}, this.checked)">
+                    <div class="form-check d-flex justify-content-center">
+                        <input type="checkbox" 
+                               class="form-check-input notification-checkbox" 
+                               value="${notification.id}" 
+                               id="checkbox_${notification.id}"
+                               ${isSelected ? 'checked' : ''}
+                               onchange="toggleNotificationSelection(${notification.id}, this.checked)"
+                               onclick="event.stopPropagation()">
+                    </div>
                 </td>
-                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
+                <td class="align-middle notification-content">
                     <div class="d-flex align-items-start">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold mb-1" style="line-height: 1.3;">
+                        <div class="flex-grow-1 overflow-hidden">
+                            <div class="fw-bold mb-1 d-flex align-items-center" style="line-height: 1.3;">
                                 ${!notification.is_read ? '<i class="fas fa-circle text-warning me-2" style="font-size: 8px;"></i>' : ''}
-                                <span class="text-truncate d-inline-block" style="max-width: 220px;" title="${notification.title}">${notification.title}</span>
+                                <span class="text-truncate" style="max-width: 200px;" title="${escapeHtml(notification.title || 'بدون عنوان')}">${escapeHtml(notification.title || 'بدون عنوان')}</span>
                             </div>
                             <div class="text-muted small" style="line-height: 1.2;">
-                                <span class="text-truncate d-inline-block" style="max-width: 250px;" title="${notification.message}">${notification.message}</span>
+                                <span class="text-truncate d-block" style="max-width: 230px;" title="${escapeHtml(notification.message || 'بدون رسالة')}">${escapeHtml(notification.message || 'بدون رسالة')}</span>
                             </div>
                         </div>
                     </div>
                 </td>
-                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
-                    <div class="fw-bold text-truncate" style="max-width: 120px;" title="${notification.user_name || 'غير محدد'}">${notification.user_name || 'غير محدد'}</div>
-                    ${notification.user_phone ? `<div class="text-muted small text-truncate" style="max-width: 120px;" title="${notification.user_phone}">${notification.user_phone}</div>` : ''}
+                <td class="align-middle user-info">
+                    <div class="overflow-hidden">
+                        <div class="fw-bold text-truncate" style="max-width: 100px;" title="${escapeHtml(notification.user_name || 'غير محدد')}">${escapeHtml(notification.user_name || 'غير محدد')}</div>
+                        ${notification.user_phone ? `<div class="text-muted small text-truncate" style="max-width: 100px;" title="${escapeHtml(notification.user_phone)}">${escapeHtml(notification.user_phone)}</div>` : ''}
+                    </div>
                 </td>
-                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
-                    <span class="badge bg-${typeColors[notification.type]} text-white" style="font-size: 10px;">
-                        <i class="fas ${typeIcons[notification.type]} me-1"></i>
+                <td class="text-center align-middle">
+                    <span class="badge bg-${typeColors[notification.type] || 'secondary'} text-white" style="font-size: 10px;">
+                        <i class="fas ${typeIcons[notification.type] || 'fa-question'} me-1"></i>
                         ${getNotificationTypeText(notification.type)}
                     </span>
                 </td>
-                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
-                    <span class="badge bg-${priorityColors[notification.priority]} text-white" style="font-size: 10px;">
-                        <i class="fas ${priorityIcons[notification.priority]} me-1"></i>
+                <td class="text-center align-middle">
+                    <span class="badge bg-${priorityColors[notification.priority] || 'secondary'} text-white" style="font-size: 10px;">
+                        <i class="fas ${priorityIcons[notification.priority] || 'fa-flag'} me-1"></i>
                         ${getNotificationPriorityText(notification.priority)}
                     </span>
                 </td>
-                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
+                <td class="text-center align-middle">
                     <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'} text-white" style="font-size: 10px;">
                         <i class="fas ${notification.is_read ? 'fa-check' : 'fa-clock'} me-1"></i>
                         ${notification.is_read ? 'مقروء' : 'غير مقروء'}
                     </span>
                 </td>
-                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
-                    <div class="small text-nowrap">${formatDate(notification.created_at)}</div>
+                <td class="align-middle">
+                    <div class="small text-nowrap text-truncate" style="max-width: 120px;" title="${formatDate(notification.created_at)}">${formatDate(notification.created_at)}</div>
                 </td>
-                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
-                    <div class="small text-truncate" style="max-width: 100px;" title="${notification.sent_by_name || 'النظام'}">
-                        ${notification.sent_by_name || 'النظام'}
+                <td class="align-middle">
+                    <div class="small text-truncate" style="max-width: 80px;" title="${escapeHtml(notification.sent_by_name || 'النظام')}">
+                        ${escapeHtml(notification.sent_by_name || 'النظام')}
                     </div>
                 </td>
                 <td class="text-center align-middle" onclick="event.stopPropagation()">
                     <div class="btn-group btn-group-sm" role="group">
                         <button class="btn btn-outline-info btn-sm" 
                                 onclick="event.stopPropagation(); showNotificationDetails(${notification.id})"
-                                title="عرض التفاصيل">
+                                title="عرض التفاصيل"
+                                style="padding: 0.25rem 0.4rem;">
                             <i class="fas fa-eye"></i>
                         </button>
                         ${!notification.is_read ? `
                             <button class="btn btn-outline-success btn-sm" 
                                     onclick="event.stopPropagation(); markSingleNotificationRead(${notification.id})"
-                                    title="تعليم كمقروء">
+                                    title="تعليم كمقروء"
+                                    style="padding: 0.25rem 0.4rem;">
                                 <i class="fas fa-check"></i>
                             </button>
                         ` : ''}
                         <button class="btn btn-outline-danger btn-sm" 
                                 onclick="event.stopPropagation(); deleteSingleNotification(${notification.id})"
-                                title="حذف الإشعار">
+                                title="حذف الإشعار"
+                                style="padding: 0.25rem 0.4rem;">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -646,24 +677,19 @@ function displayNotifications(data) {
     
     tbody.innerHTML = html;
     
-    // إضافة مستمعي أحداث النقر للصفوف
-    document.querySelectorAll('.notification-row').forEach(row => {
-        row.addEventListener('click', function(e) {
-            // تجنب تنشيط الحدث إذا تم النقر على checkbox أو أزرار
-            if (e.target.type === 'checkbox' || e.target.closest('.btn-group')) {
-                return;
-            }
-            
-            const notificationId = this.dataset.notificationId;
-            if (notificationId) {
-                showNotificationDetails(parseInt(notificationId));
-            }
-        });
-    });
-    
     // تحديث حالة التحديدات
     updateSelectAllCheckbox();
     updateBulkActionsButton();
+    
+    console.log('تم عرض', data.notifications.length, 'إشعار بنجاح');
+}
+
+// دالة مساعدة لتنظيف النصوص
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 // تحديث التنقل بين الصفحات
@@ -780,34 +806,89 @@ function updateNotificationsPagination(data) {
     pagination.innerHTML = paginationHtml;
 }
 
-// تغيير الصفحة
+// تغيير الصفحة المحدث والمحسن
 function changeNotificationsPage(page) {
+    console.log('طلب تغيير الصفحة إلى:', page);
+    
     if (isLoadingNotifications) {
         console.log('التحميل قيد التشغيل، يرجى الانتظار...');
+        showAlert('يرجى الانتظار حتى انتهاء التحميل...', 'info');
         return;
     }
     
     // التحقق من صحة رقم الصفحة
-    if (page < 1) {
+    const pageNumber = parseInt(page);
+    if (isNaN(pageNumber) || pageNumber < 1) {
         console.warn('رقم صفحة غير صحيح:', page);
+        showAlert('رقم الصفحة غير صحيح', 'warning');
         return;
     }
     
-    if (notificationsTotalPages > 0 && page > notificationsTotalPages) {
-        console.warn('رقم الصفحة أكبر من إجمالي الصفحات:', page, 'من', notificationsTotalPages);
+    if (notificationsTotalPages > 0 && pageNumber > notificationsTotalPages) {
+        console.warn('رقم الصفحة أكبر من إجمالي الصفحات:', pageNumber, 'من', notificationsTotalPages);
+        showAlert(`رقم الصفحة ${pageNumber} غير متاح. إجمالي الصفحات: ${notificationsTotalPages}`, 'warning');
         return;
     }
     
-    console.log('تغيير إلى الصفحة:', page, 'من إجمالي', notificationsTotalPages);
-    currentNotificationsPage = page;
+    if (pageNumber === currentNotificationsPage) {
+        console.log('نفس الصفحة الحالية، لا حاجة للتحديث');
+        return;
+    }
+    
+    console.log('تغيير إلى الصفحة:', pageNumber, 'من إجمالي', notificationsTotalPages);
+    currentNotificationsPage = pageNumber;
     
     // مسح التحديدات الحالية عند الانتقال لصفحة جديدة
     selectedNotifications.clear();
     updateBulkActionsButton();
     updateSelectAllCheckbox();
     
+    // تحديث الواجهة قبل التحميل
+    const pagination = document.getElementById('notificationsPagination');
+    if (pagination) {
+        // تعطيل جميع أزرار التنقل مؤقتاً
+        const buttons = pagination.querySelectorAll('button');
+        buttons.forEach(btn => {
+            btn.disabled = true;
+            btn.style.opacity = '0.6';
+        });
+    }
+    
+    // إضافة مؤشر تحميل مؤقت
+    const tableBody = document.getElementById('notificationsTableBody');
+    if (tableBody) {
+        const loadingRow = `
+            <tr class="loading-row">
+                <td colspan="9" class="text-center p-4">
+                    <div class="d-flex justify-content-center align-items-center">
+                        <div class="spinner-border text-primary me-3" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <div>جاري تحميل الصفحة ${pageNumber}...</div>
+                    </div>
+                </td>
+            </tr>
+        `;
+        tableBody.innerHTML = loadingRow;
+    }
+    
     // تحميل الصفحة الجديدة
-    loadNotificationsAdmin();
+    loadNotificationsAdmin().finally(() => {
+        // إعادة تفعيل أزرار التنقل
+        if (pagination) {
+            const buttons = pagination.querySelectorAll('button');
+            buttons.forEach(btn => {
+                btn.disabled = false;
+                btn.style.opacity = '1';
+            });
+        }
+        
+        // إزالة أي صفوف تحميل
+        const loadingRows = document.querySelectorAll('.loading-row');
+        loadingRows.forEach(row => row.remove());
+        
+        console.log('تم تحميل الصفحة', pageNumber, 'بنجاح');
+    });
 }
 
 // تحميل إحصائيات الإشعارات
@@ -908,8 +989,10 @@ async function sendBroadcastNotification() {
     }
 }
 
-// عرض تفاصيل الإشعار
+// عرض تفاصيل الإشعار - محدث ومحسن
 async function showNotificationDetails(notificationId) {
+    console.log('عرض تفاصيل الإشعار:', notificationId);
+    
     let notification = notificationsData.find(n => n.id === notificationId);
     
     // إذا لم يتم العثور على الإشعار في البيانات المحلية، جلبه من الخادم
@@ -931,14 +1014,25 @@ async function showNotificationDetails(notificationId) {
         }
     }
     
+    if (!notification) {
+        showAlert('لم يتم العثور على الإشعار', 'error');
+        return;
+    }
+    
     const modalBody = document.getElementById('notificationDetailsBody');
+    if (!modalBody) {
+        console.error('عنصر تفاصيل الإشعار غير موجود');
+        showAlert('خطأ في واجهة المستخدم', 'error');
+        return;
+    }
+    
     modalBody.innerHTML = `
         <div class="card">
             <div class="card-header bg-primary text-white">
                 <div class="d-flex justify-content-between align-items-center">
                     <h6 class="mb-0">
                         <i class="fas fa-bell me-2"></i>
-                        ${notification.title}
+                        ${escapeHtml(notification.title || 'بدون عنوان')}
                     </h6>
                     <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'}">
                         <i class="fas ${notification.is_read ? 'fa-check' : 'fa-clock'} me-1"></i>
@@ -954,8 +1048,8 @@ async function showNotificationDetails(notificationId) {
                                 <h6 class="mb-0"><i class="fas fa-user me-2"></i>معلومات المستخدم</h6>
                             </div>
                             <div class="card-body">
-                                <p><strong>الاسم:</strong> ${notification.user_name || 'غير محدد'}</p>
-                                <p><strong>رقم الهاتف:</strong> ${notification.user_phone || 'غير محدد'}</p>
+                                <p><strong>الاسم:</strong> ${escapeHtml(notification.user_name || 'غير محدد')}</p>
+                                <p><strong>رقم الهاتف:</strong> ${escapeHtml(notification.user_phone || 'غير محدد')}</p>
                                 <p><strong>معرف المستخدم:</strong> ${notification.user_id || 'غير محدد'}</p>
                             </div>
                         </div>
@@ -969,16 +1063,16 @@ async function showNotificationDetails(notificationId) {
                                 <p><strong>النوع:</strong> 
                                     <span class="badge bg-secondary">
                                         <i class="fas fa-tag me-1"></i>
-                                        ${getNotificationTypeText(notification.type)}
+                                        ${getNotificationTypeText(notification.type || 'info')}
                                     </span>
                                 </p>
                                 <p><strong>الأولوية:</strong> 
                                     <span class="badge bg-info">
                                         <i class="fas fa-flag me-1"></i>
-                                        ${getNotificationPriorityText(notification.priority)}
+                                        ${getNotificationPriorityText(notification.priority || 'normal')}
                                     </span>
                                 </p>
-                                <p><strong>المرسل:</strong> ${notification.sent_by_name || 'النظام'}</p>
+                                <p><strong>المرسل:</strong> ${escapeHtml(notification.sent_by_name || 'النظام')}</p>
                                 <p><strong>تاريخ الإرسال:</strong> ${formatDate(notification.created_at)}</p>
                             </div>
                         </div>
@@ -989,7 +1083,7 @@ async function showNotificationDetails(notificationId) {
                         <h6 class="mb-0"><i class="fas fa-comment me-2"></i>محتوى الرسالة</h6>
                     </div>
                     <div class="card-body">
-                        <div class="alert alert-light border" style="white-space: pre-wrap;">${notification.message}</div>
+                        <div class="alert alert-light border" style="white-space: pre-wrap;">${escapeHtml(notification.message || 'لا توجد رسالة')}</div>
                     </div>
                 </div>
             </div>
@@ -1106,20 +1200,41 @@ async function deleteNotification(notificationId) {
     }
 }
 
-// تبديل تحديد الإشعار
+// تبديل تحديد الإشعار - محدث ومحسن
 function toggleNotificationSelection(notificationId, isChecked) {
     console.log('تبديل التحديد للإشعار:', notificationId, 'حالة:', isChecked);
     
+    // التأكد من أن معرف الإشعار صحيح
+    if (!notificationId || isNaN(notificationId)) {
+        console.error('معرف إشعار غير صحيح:', notificationId);
+        return;
+    }
+    
+    // تحويل المعرف إلى رقم
+    const numericId = parseInt(notificationId);
+    
     if (isChecked) {
-        selectedNotifications.add(notificationId);
+        selectedNotifications.add(numericId);
     } else {
-        selectedNotifications.delete(notificationId);
+        selectedNotifications.delete(numericId);
     }
     
     // تحديث حالة الـ checkbox المقابل
-    const checkbox = document.getElementById(`checkbox_${notificationId}`);
-    if (checkbox) {
+    const checkbox = document.getElementById(`checkbox_${numericId}`);
+    if (checkbox && checkbox.checked !== isChecked) {
         checkbox.checked = isChecked;
+    }
+    
+    // تحديث لون الصف
+    const row = document.querySelector(`tr[data-notification-id="${numericId}"]`);
+    if (row) {
+        if (isChecked) {
+            row.classList.add('table-active');
+            row.style.backgroundColor = 'rgba(0,123,255,0.1)';
+        } else {
+            row.classList.remove('table-active');
+            row.style.backgroundColor = '';
+        }
     }
     
     updateSelectAllCheckbox();
@@ -1128,24 +1243,46 @@ function toggleNotificationSelection(notificationId, isChecked) {
     console.log('الإشعارات المحددة:', Array.from(selectedNotifications));
 }
 
-// تبديل تحديد جميع الإشعارات
+// تبديل تحديد جميع الإشعارات - محدث ومحسن
 function toggleSelectAllNotifications() {
     const selectAllCheckbox = document.getElementById('selectAllNotifications');
-    const checkboxes = document.querySelectorAll('.notification-checkbox');
-    
-    if (selectAllCheckbox.checked) {
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = true;
-            selectedNotifications.add(parseInt(checkbox.value));
-        });
-    } else {
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = false;
-            selectedNotifications.delete(parseInt(checkbox.value));
-        });
+    if (!selectAllCheckbox) {
+        console.error('عنصر تحديد الكل غير موجود');
+        return;
     }
     
+    const checkboxes = document.querySelectorAll('.notification-checkbox');
+    const isSelectingAll = selectAllCheckbox.checked;
+    
+    console.log(`${isSelectingAll ? 'تحديد' : 'إلغاء تحديد'} جميع الإشعارات:`, checkboxes.length);
+    
+    checkboxes.forEach(checkbox => {
+        const notificationId = parseInt(checkbox.value);
+        if (!isNaN(notificationId)) {
+            checkbox.checked = isSelectingAll;
+            
+            if (isSelectingAll) {
+                selectedNotifications.add(notificationId);
+            } else {
+                selectedNotifications.delete(notificationId);
+            }
+            
+            // تحديث لون الصف
+            const row = document.querySelector(`tr[data-notification-id="${notificationId}"]`);
+            if (row) {
+                if (isSelectingAll) {
+                    row.classList.add('table-active');
+                    row.style.backgroundColor = 'rgba(0,123,255,0.1)';
+                } else {
+                    row.classList.remove('table-active');
+                    row.style.backgroundColor = '';
+                }
+            }
+        }
+    });
+    
     updateBulkActionsButton();
+    console.log('الإشعارات المحددة بعد التحديث:', Array.from(selectedNotifications));
 }
 
 // تحديث حالة خانة تحديد الكل
@@ -1165,26 +1302,94 @@ function updateSelectAllCheckbox() {
     }
 }
 
-// تحديث زر العمليات المتعددة
+// تحديث زر العمليات المتعددة المحدث
 function updateBulkActionsButton() {
     const bulkButton = document.querySelector('[onclick="showBulkActionsModal()"]');
-    if (bulkButton) {
-        const selectedCount = selectedNotifications.size;
-        
-        if (selectedCount > 0) {
-            bulkButton.innerHTML = `<i class="fas fa-cogs me-1"></i> عمليات متعددة (${selectedCount})`;
-            bulkButton.classList.remove('btn-outline-danger', 'disabled');
-            bulkButton.classList.add('btn-danger');
-            bulkButton.disabled = false;
-            bulkButton.setAttribute('title', `تم تحديد ${selectedCount} إشعار`);
-        } else {
-            bulkButton.innerHTML = '<i class="fas fa-cogs me-1"></i> عمليات متعددة';
-            bulkButton.classList.remove('btn-danger');
-            bulkButton.classList.add('btn-outline-danger');
-            bulkButton.disabled = false; // الزر نشط دائماً لإظهار الرسالة
-            bulkButton.setAttribute('title', 'حدد إشعارات للقيام بعمليات متعددة');
-        }
+    if (!bulkButton) {
+        console.warn('لم يتم العثور على زر العمليات المتعددة');
+        return;
     }
+    
+    const selectedCount = selectedNotifications.size;
+    
+    if (selectedCount > 0) {
+        bulkButton.innerHTML = `<i class="fas fa-cogs me-1"></i> عمليات متعددة (${selectedCount})`;
+        bulkButton.classList.remove('btn-outline-danger', 'disabled');
+        bulkButton.classList.add('btn-danger');
+        bulkButton.disabled = false;
+        bulkButton.setAttribute('title', `تم تحديد ${selectedCount} إشعار - انقر للقيام بعمليات متعددة`);
+        bulkButton.style.cursor = 'pointer';
+    } else {
+        bulkButton.innerHTML = '<i class="fas fa-cogs me-1"></i> عمليات متعددة';
+        bulkButton.classList.remove('btn-danger');
+        bulkButton.classList.add('btn-outline-secondary');
+        bulkButton.disabled = false; // الزر نشط لإظهار رسالة تنبيه
+        bulkButton.setAttribute('title', 'يجب تحديد إشعار واحد على الأقل أولاً');
+        bulkButton.style.cursor = 'pointer';
+    }
+}
+
+// إظهار نموذج العمليات المتعددة المحدث
+function showBulkActionsModal() {
+    if (selectedNotifications.size === 0) {
+        // إظهار رسالة تنبيه واضحة
+        const alertHtml = `
+            <div class="alert alert-warning alert-dismissible fade show position-fixed" 
+                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-exclamation-triangle text-warning me-3 fa-lg"></i>
+                    <div class="flex-grow-1">
+                        <strong>تنبيه!</strong>
+                        <div class="small">يرجى تحديد إشعار واحد على الأقل للقيام بعمليات متعددة</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        // إزالة أي تنبيهات سابقة
+        const existingAlerts = document.querySelectorAll('.alert.position-fixed');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // إضافة التنبيه الجديد
+        document.body.insertAdjacentHTML('beforeend', alertHtml);
+        
+        // إزالة التنبيه تلقائياً بعد 5 ثوان
+        setTimeout(() => {
+            const alert = document.querySelector('.alert.position-fixed');
+            if (alert) alert.remove();
+        }, 5000);
+        
+        return;
+    }
+    
+    // إظهار النموذج
+    const modal = new bootstrap.Modal(document.getElementById('bulkActionsModal'));
+    modal.show();
+    
+    // تحديث عدد الإشعارات المختارة
+    const selectedCountElement = document.getElementById('selectedCount');
+    if (selectedCountElement) {
+        selectedCountElement.textContent = `تم تحديد ${selectedNotifications.size} إشعار`;
+    }
+    
+    // إخفاء تحذير الحذف في البداية
+    const deleteWarning = document.getElementById('deleteWarning');
+    if (deleteWarning) {
+        deleteWarning.style.display = 'none';
+    }
+    
+    // مراقبة تغيير نوع العملية
+    const actions = document.querySelectorAll('input[name="bulkAction"]');
+    actions.forEach(action => {
+        action.addEventListener('change', function() {
+            if (deleteWarning) {
+                deleteWarning.style.display = this.value === 'delete' ? 'block' : 'none';
+            }
+        });
+    });
+    
+    console.log('تم فتح نموذج العمليات المتعددة مع', selectedNotifications.size, 'إشعار محدد');
 }
 
 // إظهار نموذج العمليات المتعددة
@@ -2292,6 +2497,77 @@ async function saveUser() {
     console.log('بدء حفظ المستخدم');
 
     try {
+
+
+// دالة التعامل مع النقر على صف الإشعار
+function handleNotificationRowClick(event, notificationId) {
+    // منع النقر إذا كان على checkbox أو أزرار
+    if (event.target.closest('input[type="checkbox"]') || 
+        event.target.closest('.btn-group') || 
+        event.target.closest('button')) {
+        return;
+    }
+    
+    console.log('النقر على صف الإشعار:', notificationId);
+    showNotificationDetails(notificationId);
+}
+
+// دالة التحقق من وجود دالة formatDate
+function formatDate(dateString) {
+    if (!dateString) return 'غير محدد';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'تاريخ غير صحيح';
+        
+        return date.toLocaleString('ar-SA', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    } catch (error) {
+        console.error('خطأ في تنسيق التاريخ:', error);
+        return 'خطأ في التاريخ';
+    }
+}
+
+// دالة إظهار/إخفاء شاشة التحميل
+function showLoader(message = 'جاري التحميل...') {
+    let loader = document.getElementById('globalLoader');
+    if (!loader) {
+        loader = document.createElement('div');
+        loader.id = 'globalLoader';
+        loader.className = 'position-fixed top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center';
+        loader.style.cssText = `
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            backdrop-filter: blur(3px);
+        `;
+        loader.innerHTML = `
+            <div class="text-center text-white">
+                <div class="spinner-border text-light mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="fs-5">${message}</div>
+            </div>
+        `;
+        document.body.appendChild(loader);
+    } else {
+        loader.querySelector('div.fs-5').textContent = message;
+        loader.style.display = 'flex';
+    }
+}
+
+function hideLoader() {
+    const loader = document.getElementById('globalLoader');
+    if (loader) {
+        loader.style.display = 'none';
+    }
+}
+
         // جمع البيانات من النموذج
         const userId = document.getElementById('userId')?.value || '';
         const name = document.getElementById('userName')?.value?.trim() || '';
