@@ -1428,6 +1428,78 @@
         </div>
     </div>
 
+    <!-- نموذج رفع نسخة احتياطية -->
+    <div class="modal fade" id="uploadBackupModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">رفع نسخة احتياطية</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="uploadBackupForm">
+                        <div class="mb-3">
+                            <label class="form-label">اختر ملف النسخة الاحتياطية (ZIP)</label>
+                            <input type="file" class="form-control" id="backupFileInput" accept=".zip" required>
+                            <div class="form-text">يجب أن يكون الملف بصيغة ZIP ويحتوي على نسخة احتياطية صحيحة</div>
+                        </div>
+                        <div id="uploadProgress" style="display: none;">
+                            <div class="progress mb-3">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%">
+                                    جاري الرفع...
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-success" onclick="uploadBackup()">
+                        <i class="fas fa-upload me-2"></i>رفع النسخة الاحتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج تأكيد الاستعادة -->
+    <div class="modal fade" id="restoreConfirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        تحذير - استعادة نسخة احتياطية
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>تحذير:</strong> سيتم استبدال جميع البيانات الحالية بالنسخة الاحتياطية المحددة.
+                    </div>
+                    <p>هل أنت متأكد من استعادة النسخة الاحتياطية:</p>
+                    <p class="fw-bold text-primary" id="restoreFilename"></p>
+                    <p class="small text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        سيتم إنشاء نسخة احتياطية من الحالة الحالية تلقائياً قبل الاستعادة.
+                    </p>
+                    <input type="hidden" id="restoreBackupFilename">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-2"></i>إلغاء
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="confirmRestore()">
+                        <i class="fas fa-undo me-2"></i>استعادة النسخة الاحتياطية
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- تحميل المكتبات -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
