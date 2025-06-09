@@ -1822,6 +1822,88 @@ def search_customer(phone_number):
         print(f"خطأ في البحث عن العميل: {e}")
         return jsonify({'error': 'خطأ في الخادم'}), 500
 
+# API لزبائن المستخدم
+@app.route('/api/user/customers', methods=['GET'])
+def get_user_customers():
+    if 'user_id' not in session:
+        return jsonify({'error': 'غير مصرح'}), 403
+
+    try:
+        page = int(request.args.get('page', 1))
+        per_page = int(request.args.get('per_page', 10))
+        search = request.args.get('search', '').strip()
+        company_id = request.args.get('company_id', '')
+        
+        offset = (page - 1) * per_page
+        
+        with db_lock:
+            conn = sqlite3.connect('bills_system.db')
+            cursor = conn.cursor()
+            
+            # بناء الاستعلام مع الفلاتر
+            where_conditions = ['c.added_by = ?']
+            params = [session['user_id']]
+            
+            if search:
+                where_conditions.append('(c.name LIKE ? OR c.phone_number LIKE ? OR c.mobile_number LIKE ?)')
+                search_pattern = f'%{search}%'
+                params.extend([search_pattern, search_pattern, search_pattern])
+            
+            if company_id:
+                where_conditions.append('c.company_id = ?')
+                params.append(company_id)
+            
+            where_clause = 'WHERE ' + ' AND '.join(where_conditions)
+            
+            # جلب الزبائن
+            query = f'''
+                SELECT c.id, c.phone_number, c.name, c.mobile_number, c.company_id, 
+                       c.notes, c.created_at, COALESCE(comp.name, ic.name) as company_name
+                FROM customers c
+                LEFT JOIN companies comp ON c.company_id = comp.id
+                LEFT JOIN internet_companies ic ON c.company_id = ic.id
+                {where_clause}
+                ORDER BY c.created_at DESC
+                LIMIT ? OFFSET ?
+            '''
+            params.extend([per_page, offset])
+            
+            cursor.execute(query, params)
+            customers = cursor.fetchall()
+            
+            # جلب العدد الإجمالي
+            count_query = f'''
+                SELECT COUNT(*) FROM customers c
+                LEFT JOIN companies comp ON c.company_id = comp.id
+                LEFT JOIN internet_companies ic ON c.company_id = ic.id
+                {where_clause}
+            '''
+            cursor.execute(count_query, params[:-2])
+            total = cursor.fetchone()[0]
+            
+            conn.close()
+        
+        return jsonify({
+            'customers': [{
+                'id': customer[0],
+                'phone_number': customer[1],
+                'name': customer[2],
+                'mobile_number': customer[3],
+                'company_id': customer[4],
+                'notes': customer[5],
+                'created_at': customer[6],
+                'company_name': customer[7]
+            } for customer in customers],
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'total_pages': (total + per_page - 1) // per_page
+        })
+        
+    except Exception as e:
+        print(f"خطأ في جلب زبائن المستخدم: {e}")
+        return jsonify({'error': 'خطأ في الخادم'}), 500
+
 # مسارات إدارة المحافظات
 @app.route('/api/provinces', methods=['GET'])
 def get_provinces():
