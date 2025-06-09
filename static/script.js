@@ -413,6 +413,946 @@ function retryWithDelay(func, delay = 3000, maxRetries = 3) {
     return attempt();
 }
 
+// متغيرات عامة لإدارة الإشعارات
+let notificationsData = [];
+let selectedNotifications = new Set();
+let currentNotificationsPage = 1;
+let notificationsPerPage = 10; // تقليل العدد لتحسين الأداء
+let isLoadingNotifications = false;
+let notificationsTotalPages = 0;
+let notificationsTotalCount = 0;
+
+// تحميل الإشعارات
+async function loadNotificationsAdmin() {
+    if (isLoadingNotifications) return;
+    
+    try {
+        isLoadingNotifications = true;
+        
+        // إظهار مؤشر التحميل في الجدول
+        const tableBody = document.getElementById('notificationsTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center p-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">جاري التحميل...</span>
+                        </div>
+                        <div class="mt-2">جاري تحميل الإشعارات...</div>
+                    </td>
+                </tr>
+            `;
+        }
+        
+        const searchTerm = document.getElementById('notificationsSearch')?.value || '';
+        const typeFilter = document.getElementById('notificationTypeFilter')?.value || '';
+        const priorityFilter = document.getElementById('notificationPriorityFilter')?.value || '';
+        const readFilter = document.getElementById('notificationReadFilter')?.value || '';
+        
+        const params = new URLSearchParams({
+            page: currentNotificationsPage,
+            per_page: notificationsPerPage
+        });
+        
+        if (searchTerm) params.append('search', searchTerm);
+        if (typeFilter) params.append('type', typeFilter);
+        if (priorityFilter) params.append('priority', priorityFilter);
+        if (readFilter) params.append('read_status', readFilter);
+        
+        console.log('تحميل الإشعارات - الصفحة:', currentNotificationsPage);
+        
+        const response = await fetch(`/api/admin/notifications?${params}`);
+        if (response.ok) {
+            const data = await response.json();
+            console.log('تم تحميل الإشعارات:', data.notifications?.length || 0);
+            
+            notificationsData = data.notifications || [];
+            notificationsTotalPages = data.total_pages || 0;
+            notificationsTotalCount = data.total || 0;
+            
+            displayNotifications(data);
+            updateNotificationsPagination(data);
+            
+            // مسح التحديدات السابقة عند تحميل صفحة جديدة
+            selectedNotifications.clear();
+            updateBulkActionsButton();
+            updateSelectAllCheckbox();
+        } else if (response.status === 401) {
+            showAlert('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى', 'error');
+        } else {
+            throw new Error('فشل في تحميل الإشعارات');
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل الإشعارات:', error);
+        showAlert('فشل في تحميل الإشعارات: ' + error.message, 'error');
+        
+        // إظهار رسالة خطأ في الجدول
+        const tableBody = document.getElementById('notificationsTableBody');
+        if (tableBody) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center p-4">
+                        <div class="alert alert-danger d-inline-block">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            خطأ في تحميل الإشعارات
+                            <br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="loadNotificationsAdmin()">
+                                <i class="fas fa-redo"></i> إعادة المحاولة
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    } finally {
+        isLoadingNotifications = false;
+    }
+}
+
+// عرض الإشعارات
+function displayNotifications(data) {
+    const tbody = document.getElementById('notificationsTableBody');
+    if (!tbody) return;
+    
+    if (!data.notifications || data.notifications.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center p-4">
+                    <div class="text-center">
+                        <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">لا توجد إشعارات</p>
+                        <small class="text-muted">جرب تغيير معايير البحث أو الفلترة</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        // مسح التحديدات
+        selectedNotifications.clear();
+        updateBulkActionsButton();
+        updateSelectAllCheckbox();
+        return;
+    }
+    
+    let html = '';
+    data.notifications.forEach(notification => {
+        const typeColors = {
+            'info': 'info',
+            'success': 'success',
+            'warning': 'warning',
+            'error': 'danger'
+        };
+        
+        const priorityColors = {
+            'high': 'danger',
+            'normal': 'primary',
+            'low': 'secondary'
+        };
+        
+        const typeIcons = {
+            'info': 'fa-info-circle',
+            'success': 'fa-check-circle',
+            'warning': 'fa-exclamation-triangle',
+            'error': 'fa-times-circle'
+        };
+        
+        const priorityIcons = {
+            'high': 'fa-exclamation-circle',
+            'normal': 'fa-flag',
+            'low': 'fa-minus-circle'
+        };
+        
+        const isSelected = selectedNotifications.has(notification.id);
+        const rowClass = notification.is_read ? '' : 'table-warning';
+        
+        html += `
+            <tr class="${rowClass} notification-row" 
+                style="cursor: pointer;" 
+                data-notification-id="${notification.id}">
+                <td class="text-center align-middle" onclick="event.stopPropagation()">
+                    <input type="checkbox" 
+                           class="form-check-input notification-checkbox" 
+                           value="${notification.id}" 
+                           id="checkbox_${notification.id}"
+                           ${isSelected ? 'checked' : ''}
+                           onchange="toggleNotificationSelection(${notification.id}, this.checked)">
+                </td>
+                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <div class="d-flex align-items-start">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold mb-1" style="line-height: 1.3;">
+                                ${!notification.is_read ? '<i class="fas fa-circle text-warning me-2" style="font-size: 8px;"></i>' : ''}
+                                <span class="text-truncate d-inline-block" style="max-width: 220px;" title="${notification.title}">${notification.title}</span>
+                            </div>
+                            <div class="text-muted small" style="line-height: 1.2;">
+                                <span class="text-truncate d-inline-block" style="max-width: 250px;" title="${notification.message}">${notification.message}</span>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <div class="fw-bold text-truncate" style="max-width: 120px;" title="${notification.user_name || 'غير محدد'}">${notification.user_name || 'غير محدد'}</div>
+                    ${notification.user_phone ? `<div class="text-muted small text-truncate" style="max-width: 120px;" title="${notification.user_phone}">${notification.user_phone}</div>` : ''}
+                </td>
+                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <span class="badge bg-${typeColors[notification.type]} text-white" style="font-size: 10px;">
+                        <i class="fas ${typeIcons[notification.type]} me-1"></i>
+                        ${getNotificationTypeText(notification.type)}
+                    </span>
+                </td>
+                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <span class="badge bg-${priorityColors[notification.priority]} text-white" style="font-size: 10px;">
+                        <i class="fas ${priorityIcons[notification.priority]} me-1"></i>
+                        ${getNotificationPriorityText(notification.priority)}
+                    </span>
+                </td>
+                <td class="text-center align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'} text-white" style="font-size: 10px;">
+                        <i class="fas ${notification.is_read ? 'fa-check' : 'fa-clock'} me-1"></i>
+                        ${notification.is_read ? 'مقروء' : 'غير مقروء'}
+                    </span>
+                </td>
+                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <div class="small text-nowrap">${formatDate(notification.created_at)}</div>
+                </td>
+                <td class="align-middle" onclick="showNotificationDetails(${notification.id})">
+                    <div class="small text-truncate" style="max-width: 100px;" title="${notification.sent_by_name || 'النظام'}">
+                        ${notification.sent_by_name || 'النظام'}
+                    </div>
+                </td>
+                <td class="text-center align-middle" onclick="event.stopPropagation()">
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-info btn-sm" 
+                                onclick="event.stopPropagation(); showNotificationDetails(${notification.id})"
+                                title="عرض التفاصيل">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        ${!notification.is_read ? `
+                            <button class="btn btn-outline-success btn-sm" 
+                                    onclick="event.stopPropagation(); markSingleNotificationRead(${notification.id})"
+                                    title="تعليم كمقروء">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-outline-danger btn-sm" 
+                                onclick="event.stopPropagation(); deleteSingleNotification(${notification.id})"
+                                title="حذف الإشعار">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+    
+    tbody.innerHTML = html;
+    
+    // إضافة مستمعي أحداث النقر للصفوف
+    document.querySelectorAll('.notification-row').forEach(row => {
+        row.addEventListener('click', function(e) {
+            // تجنب تنشيط الحدث إذا تم النقر على checkbox أو أزرار
+            if (e.target.type === 'checkbox' || e.target.closest('.btn-group')) {
+                return;
+            }
+            
+            const notificationId = this.dataset.notificationId;
+            if (notificationId) {
+                showNotificationDetails(parseInt(notificationId));
+            }
+        });
+    });
+    
+    // تحديث حالة التحديدات
+    updateSelectAllCheckbox();
+    updateBulkActionsButton();
+}
+
+// تحديث التنقل بين الصفحات
+function updateNotificationsPagination(data) {
+    const paginationInfo = document.getElementById('notificationsPaginationInfo');
+    const paginationInfoBottom = document.getElementById('notificationsPaginationInfoBottom');
+    const pagination = document.getElementById('notificationsPagination');
+    
+    // تحديث معلومات التنقل
+    const start = Math.min((data.page - 1) * data.per_page + 1, data.total);
+    const end = Math.min(data.page * data.per_page, data.total);
+    const infoText = `عرض ${start}-${end} من ${data.total} إشعار`;
+    
+    if (paginationInfo) {
+        paginationInfo.textContent = infoText;
+    }
+    if (paginationInfoBottom) {
+        paginationInfoBottom.textContent = infoText;
+    }
+    
+    if (!pagination) return;
+    
+    if (data.total_pages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHtml = '';
+    const currentPage = parseInt(data.page) || 1;
+    const totalPages = parseInt(data.total_pages) || 1;
+    
+    // زر السابق
+    if (currentPage > 1) {
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeNotificationsPage(${currentPage - 1})" title="الصفحة السابقة">
+                    <i class="fas fa-chevron-right me-1"></i>السابق
+                </button>
+            </li>
+        `;
+    } else {
+        paginationHtml += `
+            <li class="page-item disabled">
+                <span class="page-link">
+                    <i class="fas fa-chevron-right me-1"></i>السابق
+                </span>
+            </li>
+        `;
+    }
+    
+    // الصفحة الأولى
+    if (currentPage > 3) {
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeNotificationsPage(1)">1</button>
+            </li>
+        `;
+        if (currentPage > 4) {
+            paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+    }
+    
+    // أرقام الصفحات المحيطة
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === currentPage) {
+            paginationHtml += `
+                <li class="page-item active">
+                    <span class="page-link">${i}</span>
+                </li>
+            `;
+        } else {
+            paginationHtml += `
+                <li class="page-item">
+                    <button type="button" class="page-link" onclick="changeNotificationsPage(${i})">${i}</button>
+                </li>
+            `;
+        }
+    }
+    
+    // الصفحة الأخيرة
+    if (currentPage < totalPages - 2) {
+        if (currentPage < totalPages - 3) {
+            paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+        }
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeNotificationsPage(${totalPages})">${totalPages}</button>
+            </li>
+        `;
+    }
+    
+    // زر التالي
+    if (currentPage < totalPages) {
+        paginationHtml += `
+            <li class="page-item">
+                <button type="button" class="page-link" onclick="changeNotificationsPage(${currentPage + 1})" title="الصفحة التالية">
+                    التالي<i class="fas fa-chevron-left ms-1"></i>
+                </button>
+            </li>
+        `;
+    } else {
+        paginationHtml += `
+            <li class="page-item disabled">
+                <span class="page-link">
+                    التالي<i class="fas fa-chevron-left ms-1"></i>
+                </span>
+            </li>
+        `;
+    }
+    
+    pagination.innerHTML = paginationHtml;
+}
+
+// تغيير الصفحة
+function changeNotificationsPage(page) {
+    if (isLoadingNotifications) {
+        console.log('التحميل قيد التشغيل، يرجى الانتظار...');
+        return;
+    }
+    
+    // التحقق من صحة رقم الصفحة
+    if (page < 1) {
+        console.warn('رقم صفحة غير صحيح:', page);
+        return;
+    }
+    
+    if (notificationsTotalPages > 0 && page > notificationsTotalPages) {
+        console.warn('رقم الصفحة أكبر من إجمالي الصفحات:', page, 'من', notificationsTotalPages);
+        return;
+    }
+    
+    console.log('تغيير إلى الصفحة:', page, 'من إجمالي', notificationsTotalPages);
+    currentNotificationsPage = page;
+    
+    // مسح التحديدات الحالية عند الانتقال لصفحة جديدة
+    selectedNotifications.clear();
+    updateBulkActionsButton();
+    updateSelectAllCheckbox();
+    
+    // تحميل الصفحة الجديدة
+    loadNotificationsAdmin();
+}
+
+// تحميل إحصائيات الإشعارات
+async function loadNotificationsStats() {
+    try {
+        const response = await fetch('/api/admin/notifications/stats');
+        if (response.ok) {
+            const stats = await response.json();
+            updateNotificationsStatsDisplay(stats);
+        }
+    } catch (error) {
+        console.error('خطأ في تحميل إحصائيات الإشعارات:', error);
+    }
+}
+
+// تحديث عرض الإحصائيات
+function updateNotificationsStatsDisplay(stats) {
+    const elements = {
+        totalNotifications: document.getElementById('totalNotifications'),
+        unreadNotifications: document.getElementById('unreadNotifications'),
+        todayNotifications: document.getElementById('todayNotifications'),
+        highPriorityNotifications: document.getElementById('highPriorityNotifications')
+    };
+    
+    if (elements.totalNotifications) elements.totalNotifications.textContent = stats.total || 0;
+    if (elements.unreadNotifications) elements.unreadNotifications.textContent = stats.unread || 0;
+    if (elements.todayNotifications) elements.todayNotifications.textContent = stats.by_period?.today || 0;
+    if (elements.highPriorityNotifications) elements.highPriorityNotifications.textContent = stats.by_priority?.high || 0;
+}
+
+// تحديث الإشعارات
+async function refreshNotifications() {
+    await loadNotificationsAdmin();
+    await loadNotificationsStats();
+    showAlert('تم تحديث الإشعارات بنجاح', 'success');
+}
+
+// إظهار نموذج الإشعار الجماعي
+function showBroadcastNotificationModal() {
+    const modal = new bootstrap.Modal(document.getElementById('broadcastNotificationModal'));
+    modal.show();
+    
+    // مسح النموذج
+    document.getElementById('broadcastNotificationForm').reset();
+}
+
+// إرسال إشعار جماعي
+async function sendBroadcastNotification() {
+    const title = document.getElementById('broadcastTitle').value.trim();
+    const message = document.getElementById('broadcastMessage').value.trim();
+    const type = document.getElementById('broadcastType').value;
+    const priority = document.getElementById('broadcastPriority').value;
+    const target = document.getElementById('broadcastTarget').value;
+    
+    if (!title || !message) {
+        showAlert('يرجى ملء جميع الحقول المطلوبة', 'error');
+        return;
+    }
+    
+    try {
+        showLoader('جاري إرسال الإشعار...');
+        
+        const response = await fetch('/api/notifications/broadcast', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: title,
+                message: message,
+                type: type,
+                priority: priority,
+                target_type: target
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert(result.message, 'success');
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('broadcastNotificationModal'));
+            modal.hide();
+            
+            // تحديث الإشعارات
+            setTimeout(() => {
+                refreshNotifications();
+            }, 1000);
+        } else {
+            showAlert(result.error || 'فشل في إرسال الإشعار', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في إرسال الإشعار:', error);
+        showAlert('خطأ في إرسال الإشعار', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// عرض تفاصيل الإشعار
+async function showNotificationDetails(notificationId) {
+    let notification = notificationsData.find(n => n.id === notificationId);
+    
+    // إذا لم يتم العثور على الإشعار في البيانات المحلية، جلبه من الخادم
+    if (!notification) {
+        try {
+            showLoader('جاري تحميل تفاصيل الإشعار...');
+            const response = await fetch(`/api/admin/notifications/${notificationId}`);
+            if (response.ok) {
+                notification = await response.json();
+            } else {
+                throw new Error('فشل في تحميل تفاصيل الإشعار');
+            }
+        } catch (error) {
+            console.error('خطأ في تحميل تفاصيل الإشعار:', error);
+            showAlert('فشل في تحميل تفاصيل الإشعار', 'error');
+            return;
+        } finally {
+            hideLoader();
+        }
+    }
+    
+    const modalBody = document.getElementById('notificationDetailsBody');
+    modalBody.innerHTML = `
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bell me-2"></i>
+                        ${notification.title}
+                    </h6>
+                    <span class="badge ${notification.is_read ? 'bg-success' : 'bg-warning'}">
+                        <i class="fas ${notification.is_read ? 'fa-check' : 'fa-clock'} me-1"></i>
+                        ${notification.is_read ? 'مقروء' : 'غير مقروء'}
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-user me-2"></i>معلومات المستخدم</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>الاسم:</strong> ${notification.user_name || 'غير محدد'}</p>
+                                <p><strong>رقم الهاتف:</strong> ${notification.user_phone || 'غير محدد'}</p>
+                                <p><strong>معرف المستخدم:</strong> ${notification.user_id || 'غير محدد'}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card h-100">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>تفاصيل الإشعار</h6>
+                            </div>
+                            <div class="card-body">
+                                <p><strong>النوع:</strong> 
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-tag me-1"></i>
+                                        ${getNotificationTypeText(notification.type)}
+                                    </span>
+                                </p>
+                                <p><strong>الأولوية:</strong> 
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-flag me-1"></i>
+                                        ${getNotificationPriorityText(notification.priority)}
+                                    </span>
+                                </p>
+                                <p><strong>المرسل:</strong> ${notification.sent_by_name || 'النظام'}</p>
+                                <p><strong>تاريخ الإرسال:</strong> ${formatDate(notification.created_at)}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-comment me-2"></i>محتوى الرسالة</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light border" style="white-space: pre-wrap;">${notification.message}</div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        ${!notification.is_read ? `
+                            <button class="btn btn-success btn-sm me-2" onclick="markSingleNotificationRead(${notification.id})">
+                                <i class="fas fa-check me-1"></i>تعليم كمقروء
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-danger btn-sm" onclick="deleteSingleNotification(${notification.id})">
+                            <i class="fas fa-trash me-1"></i>حذف الإشعار
+                        </button>
+                    </div>
+                    <div>
+                        <small class="text-muted">معرف الإشعار: #${notification.id}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    const modal = new bootstrap.Modal(document.getElementById('notificationDetailsModal'));
+    modal.show();
+}
+
+// تعليم إشعار واحد كمقروء
+async function markSingleNotificationRead(notificationId) {
+    try {
+        const response = await fetch(`/api/admin/notifications/mark-read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ids: [notificationId]
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم تعليم الإشعار كمقروء', 'success');
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationDetailsModal'));
+            if (modal) modal.hide();
+            
+            // إعادة تحميل الإشعارات
+            loadNotificationsAdmin();
+        } else {
+            showAlert(result.error || 'فشل في تعليم الإشعار', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في تعليم الإشعار:', error);
+        showAlert('خطأ في تعليم الإشعار', 'error');
+    }
+}
+
+// حذف إشعار واحد
+async function deleteSingleNotification(notificationId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الإشعار؟')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/notifications/${notificationId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم حذف الإشعار بنجاح', 'success');
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('notificationDetailsModal'));
+            if (modal) modal.hide();
+            
+            // إعادة تحميل الإشعارات
+            loadNotificationsAdmin();
+        } else {
+            showAlert(result.error || 'فشل في حذف الإشعار', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في حذف الإشعار:', error);
+        showAlert('خطأ في حذف الإشعار', 'error');
+    }
+}
+
+// حذف إشعار
+async function deleteNotification(notificationId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الإشعار؟')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/admin/notifications/${notificationId}`, {
+            method: 'DELETE'
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert('تم حذف الإشعار بنجاح', 'success');
+            loadNotificationsAdmin();
+        } else {
+            showAlert(result.error || 'فشل في حذف الإشعار', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في حذف الإشعار:', error);
+        showAlert('خطأ في حذف الإشعار', 'error');
+    }
+}
+
+// تبديل تحديد الإشعار
+function toggleNotificationSelection(notificationId, isChecked) {
+    console.log('تبديل التحديد للإشعار:', notificationId, 'حالة:', isChecked);
+    
+    if (isChecked) {
+        selectedNotifications.add(notificationId);
+    } else {
+        selectedNotifications.delete(notificationId);
+    }
+    
+    // تحديث حالة الـ checkbox المقابل
+    const checkbox = document.getElementById(`checkbox_${notificationId}`);
+    if (checkbox) {
+        checkbox.checked = isChecked;
+    }
+    
+    updateSelectAllCheckbox();
+    updateBulkActionsButton();
+    
+    console.log('الإشعارات المحددة:', Array.from(selectedNotifications));
+}
+
+// تبديل تحديد جميع الإشعارات
+function toggleSelectAllNotifications() {
+    const selectAllCheckbox = document.getElementById('selectAllNotifications');
+    const checkboxes = document.querySelectorAll('.notification-checkbox');
+    
+    if (selectAllCheckbox.checked) {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            selectedNotifications.add(parseInt(checkbox.value));
+        });
+    } else {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            selectedNotifications.delete(parseInt(checkbox.value));
+        });
+    }
+    
+    updateBulkActionsButton();
+}
+
+// تحديث حالة خانة تحديد الكل
+function updateSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById('selectAllNotifications');
+    const checkboxes = document.querySelectorAll('.notification-checkbox');
+    const checkedBoxes = document.querySelectorAll('.notification-checkbox:checked');
+    
+    if (checkedBoxes.length === 0) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = false;
+    } else if (checkedBoxes.length === checkboxes.length) {
+        selectAllCheckbox.indeterminate = false;
+        selectAllCheckbox.checked = true;
+    } else {
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+// تحديث زر العمليات المتعددة
+function updateBulkActionsButton() {
+    const bulkButton = document.querySelector('[onclick="showBulkActionsModal()"]');
+    if (bulkButton) {
+        const selectedCount = selectedNotifications.size;
+        
+        if (selectedCount > 0) {
+            bulkButton.innerHTML = `<i class="fas fa-cogs me-1"></i> عمليات متعددة (${selectedCount})`;
+            bulkButton.classList.remove('btn-outline-danger', 'disabled');
+            bulkButton.classList.add('btn-danger');
+            bulkButton.disabled = false;
+            bulkButton.setAttribute('title', `تم تحديد ${selectedCount} إشعار`);
+        } else {
+            bulkButton.innerHTML = '<i class="fas fa-cogs me-1"></i> عمليات متعددة';
+            bulkButton.classList.remove('btn-danger');
+            bulkButton.classList.add('btn-outline-danger');
+            bulkButton.disabled = false; // الزر نشط دائماً لإظهار الرسالة
+            bulkButton.setAttribute('title', 'حدد إشعارات للقيام بعمليات متعددة');
+        }
+    }
+}
+
+// إظهار نموذج العمليات المتعددة
+function showBulkActionsModal() {
+    if (selectedNotifications.size === 0) {
+        showAlert('يرجى تحديد إشعار واحد على الأقل', 'warning');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('bulkActionsModal'));
+    modal.show();
+    
+    // تحديث عدد الإشعارات المختارة
+    const selectedCount = document.getElementById('selectedCount');
+    selectedCount.textContent = `تم تحديد ${selectedNotifications.size} إشعار`;
+    
+    // مراقبة تغيير نوع العملية
+    const actions = document.querySelectorAll('input[name="bulkAction"]');
+    const deleteWarning = document.getElementById('deleteWarning');
+    
+    actions.forEach(action => {
+        action.addEventListener('change', function() {
+            if (this.value === 'delete') {
+                deleteWarning.style.display = 'block';
+            } else {
+                deleteWarning.style.display = 'none';
+            }
+        });
+    });
+}
+
+// تنفيذ العملية المتعددة
+async function executeBulkAction() {
+    const selectedAction = document.querySelector('input[name="bulkAction"]:checked');
+    if (!selectedAction) {
+        showAlert('يرجى اختيار نوع العملية', 'warning');
+        return;
+    }
+    
+    const action = selectedAction.value;
+    const notificationIds = Array.from(selectedNotifications);
+    
+    try {
+        showLoader('جاري تنفيذ العملية...');
+        
+        let endpoint, method;
+        if (action === 'delete') {
+            endpoint = '/api/admin/notifications/bulk-delete';
+            method = 'POST';
+        } else if (action === 'mark_read') {
+            endpoint = '/api/admin/notifications/mark-read';
+            method = 'POST';
+        }
+        
+        const response = await fetch(endpoint, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ids: notificationIds
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            showAlert(result.message, 'success');
+            
+            // إغلاق النموذج
+            const modal = bootstrap.Modal.getInstance(document.getElementById('bulkActionsModal'));
+            modal.hide();
+            
+            // مسح التحديدات
+            selectedNotifications.clear();
+            
+            // تحديث الإشعارات
+            loadNotificationsAdmin();
+        } else {
+            showAlert(result.error || 'فشل في تنفيذ العملية', 'error');
+        }
+    } catch (error) {
+        console.error('خطأ في تنفيذ العملية:', error);
+        showAlert('خطأ في تنفيذ العملية', 'error');
+    } finally {
+        hideLoader();
+    }
+}
+
+// مسح فلاتر البحث
+function clearNotificationFilters() {
+    document.getElementById('notificationsSearch').value = '';
+    document.getElementById('notificationTypeFilter').value = '';
+    document.getElementById('notificationPriorityFilter').value = '';
+    document.getElementById('notificationReadFilter').value = '';
+    
+    currentNotificationsPage = 1;
+    loadNotificationsAdmin();
+}
+
+// دوال مساعدة
+function getNotificationTypeText(type) {
+    const types = {
+        'info': 'معلومات',
+        'success': 'نجاح',
+        'warning': 'تحذير',
+        'error': 'خطأ'
+    };
+    return types[type] || 'معلومات';
+}
+
+function getNotificationPriorityText(priority) {
+    const priorities = {
+        'high': 'عالية',
+        'normal': 'عادية',
+        'low': 'منخفضة'
+    };
+    return priorities[priority] || 'عادية';
+}
+
+// دوال التحميل المباشر (للاستخدام عند فشل النطاق العام)
+async function loadNotificationsDirectly() {
+    console.log('تحميل الإشعارات مباشرة...');
+    await loadNotificationsAdmin();
+}
+
+async function loadNotificationsStatsDirectly() {
+    console.log('تحميل إحصائيات الإشعارات مباشرة...');
+    await loadNotificationsStats();
+}
+
+async function refreshNotificationsDirectly() {
+    console.log('تحديث الإشعارات مباشرة...');
+    await loadNotificationsAdmin();
+    await loadNotificationsStats();
+    showAlert('تم تحديث الإشعارات بنجاح', 'success');
+}
+
+// إعداد مستمعي الأحداث للبحث والفلترة
+document.addEventListener('DOMContentLoaded', function() {
+    // البحث التلقائي
+    const searchInput = document.getElementById('notificationsSearch');
+    if (searchInput) {
+        let searchTimeout;
+        searchInput.addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                currentNotificationsPage = 1;
+                selectedNotifications.clear(); // مسح التحديدات عند البحث
+                loadNotificationsAdmin();
+            }, 500);
+        });
+    }
+    
+    // فلاتر التصفية
+    const filters = ['notificationTypeFilter', 'notificationPriorityFilter', 'notificationReadFilter'];
+    filters.forEach(filterId => {
+        const filter = document.getElementById(filterId);
+        if (filter) {
+            filter.addEventListener('change', function() {
+                currentNotificationsPage = 1;
+                selectedNotifications.clear(); // مسح التحديدات عند تغيير الفلتر
+                loadNotificationsAdmin();
+            });
+        }
+    });
+});
+
 // دالة لإعادة تحميل البيانات الأساسية
 async function reloadBasicData() {
     try {
@@ -1287,6 +2227,11 @@ function showAdminSection(sectionId, clickedElement) {
                     case 'inquiryRequests':
                         console.log('تحميل طلبات التسديد...');
                         await retryWithDelay(() => loadPaymentRequests());
+                        break;
+                    case 'adminNotifications':
+                        console.log('تحميل إدارة الإشعارات...');
+                        await retryWithDelay(() => loadNotificationsAdmin());
+                        await retryWithDelay(() => loadNotificationsStats());
                         break;
                     case 'settings':
                         await loadSiteSettingsAdmin();
