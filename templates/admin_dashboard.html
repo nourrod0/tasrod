@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة الإدارة - مؤسسة نور التجارية</title>
+    <title>لوحة الإدارة - نظام تسديد الفواتير</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
@@ -1320,7 +1320,7 @@
                                     <div class="col-md-6">
                                         <div class="mb-3">
                                             <label class="form-label">اسم الموقع</label>
-                                            <input type="text" class="form-control" id="siteName" value="مؤسسة نور التجارية">
+                                            <input type="text" class="form-control" id="siteName" value="نظام تسديد الفواتير">
                                         </div>
                                     </div>
                                     <div class="col-md-6">
@@ -1335,10 +1335,10 @@
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label">نص الإعلان</label>
-                                    <textarea class="form-control" id="announcement" rows="3">مرحباً بكم في نظام تسديد فواتير مؤسسة نور التجارية</textarea>
+                                    <textarea class="form-control" id="announcement" rows="3">مرحباً بكم في نظام تسديد فواتير نظام تسديد الفواتير</textarea>
                                 </div>
                                 <div class="mb-3" id="maintenanceReasonSection" style="display: none;">
-                                    <label class="form-label">سبب الصيانة</label>
+                                    <label class="form-label">مدة الاغلاق</label>
                                     <textarea class="form-control" id="maintenanceReason" rows="2" placeholder="سبب إيقاف الموقع مؤقتاً..."></textarea>
                                 </div>
                                 <div class="mb-3">
@@ -3425,7 +3425,7 @@
                     if (announcementField) announcementField.value = settings.announcement || 'مرحباً بكم في نظام تسديد الفواتير';
                     if (maintenanceModeField) {
                         maintenanceModeField.value = settings.is_maintenance ? 'true' : 'false';
-                        // تحديث عرض قسم سبب الصيانة
+                        // تحديث عرض قسم مدة الاغلاق
                         const reasonSection = document.getElementById('maintenanceReasonSection');
                         if (reasonSection) {
                             reasonSection.style.display = settings.is_maintenance ? 'block' : 'none';
