@@ -306,12 +306,7 @@ def init_db():
         )
     ''')
 
-    # إضافة مستخدم إداري افتراضي
-    hashed_password = hashlib.md5('admin123'.encode()).hexdigest()
-    cursor.execute('''
-        INSERT OR IGNORE INTO users (name, phone, password, role, balance)
-        VALUES (?, ?, ?, ?, ?)
-    ''', ('المدير العام', '0000000000', hashed_password, 'admin', 0))
+    # تم إزالة إضافة المستخدم الافتراضي
 
     # إضافة بعض المحافظات
     provinces = [
