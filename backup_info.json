@@ -1,7 +1,7 @@
 {
-  "created_at": "2025-05-31T07:33:02.293906",
-  "created_by": "المدير العام",
-  "total_files": 15,
+  "created_at": "2025-06-30T08:44:44.497111",
+  "created_by": "الادارة",
+  "total_files": 16,
   "files_included": [
     "main.py",
     "telegram_bot.py",
@@ -11,12 +11,13 @@
     "requirements_telegram.txt",
     ".replit",
     "index.html",
-    "templates/maintenance.html",
-    "templates/login.html",
-    "templates/base.html",
     "templates/admin_dashboard.html",
+    "templates/maintenance.html",
     "templates/dashboard.html",
+    "templates/base.html",
+    "templates/login.html",
     "static/style.css",
+    "static/test.txt",
     "static/script.js"
   ],
   "backup_version": "2.0",
